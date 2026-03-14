@@ -27,12 +27,12 @@ class DrawingView @JvmOverloads constructor(
     private val strokes = mutableListOf<Stroke>()
     private val redoStack = mutableListOf<Stroke>()
 
-    private var currentPath = Path()
-    private var currentPaint = createPaint()
-
     private var _brushColor: Int = Color.BLACK
     private var _brushSize: Float = 12f
     private var _brushType: BrushType = BrushType.PEN
+
+    private var currentPath = Path()
+    private var currentPaint = createPaint()
 
     private var lastX = 0f
     private var lastY = 0f
