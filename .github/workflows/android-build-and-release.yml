@@ -35,6 +35,14 @@ jobs:
       - name: Build release APK
         run: ./gradlew assembleRelease
 
+      - name: Verify release APK is signed
+        run: |
+          if ls app/build/outputs/apk/release/*-unsigned.apk >/dev/null 2>&1; then
+            echo "Unsigned APKs must not be published."
+            ls app/build/outputs/apk/release
+            exit 1
+          fi
+
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
