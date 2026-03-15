@@ -24,6 +24,10 @@ class DrawingView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    companion object {
+        private const val MIN_VIEWPORT_SCALE_FOR_BRUSH_CALC = 1e-12
+    }
+
     private data class Stroke(val path: Path, val paint: Paint)
 
     private val strokes = mutableListOf<Stroke>()
@@ -34,6 +38,7 @@ class DrawingView @JvmOverloads constructor(
     private var _brushType: BrushType = BrushType.PEN
 
     private var currentPath = Path()
+    private var currentPaintViewportScale = 1.0
     private var currentPaint = createPaint()
 
     private var lastX = 0f
@@ -63,18 +68,20 @@ class DrawingView @JvmOverloads constructor(
 
     var brushColor: Int
         get() = _brushColor
-        set(value) { _brushColor = value; currentPaint = createPaint() }
+        set(value) { _brushColor = value; refreshCurrentPaint() }
 
     var brushSize: Float
         get() = _brushSize
-        set(value) { _brushSize = value; currentPaint = createPaint() }
+        set(value) { _brushSize = value; refreshCurrentPaint() }
 
     var brushType: BrushType
         get() = _brushType
-        set(value) { _brushType = value; currentPaint = createPaint() }
+        set(value) { _brushType = value; refreshCurrentPaint() }
 
     private fun createPaint(): Paint {
-        val zoomAdjustedBrushSize = (_brushSize / viewportScale.coerceAtLeast(1e-12f.toDouble())).toFloat()
+        val zoomAdjustedBrushSize = (
+            _brushSize / viewportScale.coerceAtLeast(MIN_VIEWPORT_SCALE_FOR_BRUSH_CALC)
+        ).toFloat()
         return Paint().apply {
             isAntiAlias = true
             style = Paint.Style.STROKE
@@ -228,7 +235,7 @@ class DrawingView @JvmOverloads constructor(
 
     private fun startStroke(screenX: Float, screenY: Float) {
         redoStack.clear()
-        currentPaint = createPaint()
+        if (currentPaintViewportScale != viewportScale) refreshCurrentPaint()
         currentPath = Path()
         val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         currentPath.moveTo(canvasX, canvasY)
@@ -255,7 +262,7 @@ class DrawingView @JvmOverloads constructor(
         currentPath.lineTo(canvasX, canvasY)
         strokes.add(Stroke(currentPath, currentPaint))
         currentPath = Path()
-        currentPaint = createPaint()
+        refreshCurrentPaint()
         isDrawingStroke = false
         parent?.requestDisallowInterceptTouchEvent(false)
         invalidate()
@@ -299,7 +306,7 @@ class DrawingView @JvmOverloads constructor(
         currentPath.lineTo(lastX, lastY)
         strokes.add(Stroke(currentPath, currentPaint))
         currentPath = Path()
-        currentPaint = createPaint()
+        refreshCurrentPaint()
         isDrawingStroke = false
         invalidate()
     }
@@ -360,8 +367,15 @@ class DrawingView @JvmOverloads constructor(
 
     private fun updateViewportMatrix() {
         viewportMatrix.reset()
+        // Keep the viewport transform in screen = (canvas * scale) + offset form so
+        // the inverse matrix maps touch input back into the exact same draw space.
         viewportMatrix.postScale(viewportScale.toFloat(), viewportScale.toFloat())
         viewportMatrix.postTranslate(viewportOffsetX.toFloat(), viewportOffsetY.toFloat())
         viewportMatrix.invert(inverseViewportMatrix)
+    }
+
+    private fun refreshCurrentPaint() {
+        currentPaint = createPaint()
+        currentPaintViewportScale = viewportScale
     }
 }

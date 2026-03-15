@@ -51,6 +51,8 @@ class DrawingViewViewportGestureTest {
                 val bitmap = drawingView.exportBitmap()
 
                 assertEquals(Color.BLACK, bitmap.getPixel(260, 120))
+                assertEquals(Color.BLACK, bitmap.getPixel(260, 128))
+                assertEquals(Color.WHITE, bitmap.getPixel(260, 145))
                 assertEquals(Color.WHITE, bitmap.getPixel(260, 170))
             }
         }
