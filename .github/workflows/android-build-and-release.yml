@@ -2,6 +2,11 @@ name: Android build and release
 
 on:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
   push:
     branches:
       - main
@@ -11,6 +16,7 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'push' || github.event.action != 'closed'
     runs-on: ubuntu-latest
 
     steps:
@@ -51,7 +57,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -69,14 +75,61 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             PR_SHA="${{ github.event.pull_request.head.sha }}"
-            echo "tag=PR-${{ github.event.pull_request.number }}-${PR_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "pr_prefix=PR-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "tag=PR-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
             echo "name=PR #${{ github.event.pull_request.number }} build ${PR_SHA::7}" >> "$GITHUB_OUTPUT"
             echo "target=${PR_SHA}" >> "$GITHUB_OUTPUT"
           else
+            echo "pr_prefix=" >> "$GITHUB_OUTPUT"
             echo "tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
             echo "name=Main build ${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
             echo "target=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Remove previous release for this PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PR_RELEASE_PREFIX: ${{ steps.release_metadata.outputs.pr_prefix }}
+        with:
+          script: |
+            const prefix = process.env.PR_RELEASE_PREFIX;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const matchesPrefix = (tagName) =>
+              tagName === prefix || tagName.startsWith(`${prefix}-`);
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            for (const release of releases) {
+              if (!matchesPrefix(release.tag_name)) {
+                continue;
+              }
+
+              core.info(`Deleting release ${release.tag_name} (${release.id})`);
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.id,
+              });
+
+              try {
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: `tags/${release.tag_name}`,
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
@@ -88,3 +141,54 @@ jobs:
           generate_release_notes: true
           files: release-artifact/*.apk
           fail_on_unmatched_files: true
+
+  cleanup_pr_release:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Remove PR release
+        uses: actions/github-script@v7
+        env:
+          PR_RELEASE_PREFIX: PR-${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const prefix = process.env.PR_RELEASE_PREFIX;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const matchesPrefix = (tagName) =>
+              tagName === prefix || tagName.startsWith(`${prefix}-`);
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+
+            for (const release of releases) {
+              if (!matchesPrefix(release.tag_name)) {
+                continue;
+              }
+
+              core.info(`Deleting release ${release.tag_name} (${release.id})`);
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: release.id,
+              });
+
+              try {
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: `tags/${release.tag_name}`,
+                });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
