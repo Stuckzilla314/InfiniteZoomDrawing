@@ -51,7 +51,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -67,15 +67,23 @@ jobs:
       - name: Prepare release metadata
         id: release_metadata
         run: |
-          echo "tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "name=Main build ${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_SHA="${{ github.event.pull_request.head.sha }}"
+            echo "tag=PR-${{ github.event.pull_request.number }}-${PR_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "name=PR #${{ github.event.pull_request.number }} build ${PR_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "target=${PR_SHA}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "name=Main build ${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "target=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_metadata.outputs.tag }}
           name: ${{ steps.release_metadata.outputs.name }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ steps.release_metadata.outputs.target }}
           prerelease: true
           generate_release_notes: true
           files: release-artifact/*.apk
