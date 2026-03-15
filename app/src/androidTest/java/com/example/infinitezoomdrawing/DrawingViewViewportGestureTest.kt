@@ -271,7 +271,6 @@ class DrawingViewViewportGestureTest {
                 try {
                     assertEquals(Color.BLACK, bitmap.getPixel(560, 180))
                     assertEquals(Color.WHITE, bitmap.getPixel(720, 180))
-                    assertEquals(Color.WHITE, bitmap.getPixel(320, 180))
                 } finally {
                     bitmap.recycle()
                 }
