@@ -15,22 +15,43 @@ import kotlin.math.abs
 class DrawingViewViewportGestureTest {
 
     @Test
-    fun transformedViewport_keepsDrawingAlignedWithTouchInput() {
+    fun deepZoomViewport_keepsDrawingAlignedWithTouchInput() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
 
-                drawingView.setViewportTransform(scale = 2.0, offsetX = 40.0, offsetY = 20.0)
+                drawingView.setViewportTransform(scale = 32.0, offsetX = 480.0, offsetY = 240.0)
                 drawingView.brushType = BrushType.PEN
                 drawingView.brushColor = Color.BLACK
                 drawingView.brushSize = 24f
 
-                dispatchStroke(drawingView, 80f, 60f, 200f, 60f)
+                dispatchStroke(drawingView, 600f, 400f, 760f, 400f)
 
                 val bitmap = drawingView.exportBitmap()
 
-                assertEquals(Color.BLACK, bitmap.getPixel(140, 60))
-                assertEquals(Color.WHITE, bitmap.getPixel(30, 60))
+                assertEquals(Color.BLACK, bitmap.getPixel(680, 400))
+                assertEquals(Color.WHITE, bitmap.getPixel(540, 400))
+            }
+        }
+    }
+
+    @Test
+    fun deepZoomBrushSize_staysRelativeToViewport() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.setViewportTransform(scale = 8.0, offsetX = 0.0, offsetY = 0.0)
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushColor = Color.BLACK
+                drawingView.brushSize = 24f
+
+                dispatchStroke(drawingView, 200f, 120f, 320f, 120f)
+
+                val bitmap = drawingView.exportBitmap()
+
+                assertEquals(Color.BLACK, bitmap.getPixel(260, 120))
+                assertEquals(Color.WHITE, bitmap.getPixel(260, 170))
             }
         }
     }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
@@ -51,6 +52,14 @@ class DrawingView @JvmOverloads constructor(
     private var lastFocusY = 0f
 
     private val scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
+    private val viewportMatrix = Matrix()
+    private val inverseViewportMatrix = Matrix()
+    private val mappedPoint = FloatArray(2)
+
+    init {
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
+        updateViewportMatrix()
+    }
 
     var brushColor: Int
         get() = _brushColor
@@ -65,6 +74,7 @@ class DrawingView @JvmOverloads constructor(
         set(value) { _brushType = value; currentPaint = createPaint() }
 
     private fun createPaint(): Paint {
+        val zoomAdjustedBrushSize = (_brushSize / viewportScale.coerceAtLeast(1e-12f.toDouble())).toFloat()
         return Paint().apply {
             isAntiAlias = true
             style = Paint.Style.STROKE
@@ -73,14 +83,14 @@ class DrawingView @JvmOverloads constructor(
             when (_brushType) {
                 BrushType.PEN -> {
                     color = _brushColor
-                    strokeWidth = _brushSize
+                    strokeWidth = zoomAdjustedBrushSize
                     alpha = 255
                     xfermode = null
                     maskFilter = null
                 }
                 BrushType.MARKER -> {
                     color = _brushColor
-                    strokeWidth = _brushSize * 2.5f
+                    strokeWidth = zoomAdjustedBrushSize * 2.5f
                     alpha = 180
                     strokeCap = Paint.Cap.SQUARE
                     xfermode = null
@@ -88,17 +98,17 @@ class DrawingView @JvmOverloads constructor(
                 }
                 BrushType.BRUSH -> {
                     color = _brushColor
-                    strokeWidth = _brushSize * 1.5f
+                    strokeWidth = zoomAdjustedBrushSize * 1.5f
                     alpha = 150
                     xfermode = null
                     maskFilter = android.graphics.BlurMaskFilter(
-                        _brushSize * 0.5f,
+                        zoomAdjustedBrushSize * 0.5f,
                         android.graphics.BlurMaskFilter.Blur.NORMAL
                     )
                 }
                 BrushType.ERASER -> {
                     color = Color.TRANSPARENT
-                    strokeWidth = _brushSize * 2f
+                    strokeWidth = zoomAdjustedBrushSize * 2f
                     xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
                     maskFilter = null
                 }
@@ -109,8 +119,7 @@ class DrawingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.WHITE)
         canvas.save()
-        canvas.translate(viewportOffsetX.toFloat(), viewportOffsetY.toFloat())
-        canvas.scale(viewportScale.toFloat(), viewportScale.toFloat())
+        canvas.concat(viewportMatrix)
         loadedBitmap?.let { canvas.drawBitmap(it, loadedBitmapX, loadedBitmapY, null) }
         val layer = canvas.saveLayer(null, null)
         for (stroke in strokes) canvas.drawPath(stroke.path, stroke.paint)
@@ -163,6 +172,7 @@ class DrawingView @JvmOverloads constructor(
             viewportScale = scale
             viewportOffsetX = offsetX
             viewportOffsetY = offsetY
+            updateViewportMatrix()
             invalidate()
         }
     }
@@ -218,9 +228,9 @@ class DrawingView @JvmOverloads constructor(
 
     private fun startStroke(screenX: Float, screenY: Float) {
         redoStack.clear()
+        currentPaint = createPaint()
         currentPath = Path()
-        val canvasX = toCanvasX(screenX)
-        val canvasY = toCanvasY(screenY)
+        val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         currentPath.moveTo(canvasX, canvasY)
         lastX = canvasX
         lastY = canvasY
@@ -230,8 +240,7 @@ class DrawingView @JvmOverloads constructor(
 
     private fun updateStroke(screenX: Float, screenY: Float) {
         if (!isDrawingStroke) return
-        val canvasX = toCanvasX(screenX)
-        val canvasY = toCanvasY(screenY)
+        val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         val midX = (lastX + canvasX) / 2f
         val midY = (lastY + canvasY) / 2f
         currentPath.quadTo(lastX, lastY, midX, midY)
@@ -242,8 +251,7 @@ class DrawingView @JvmOverloads constructor(
 
     private fun finishStroke(screenX: Float, screenY: Float) {
         if (!isDrawingStroke) return
-        val canvasX = toCanvasX(screenX)
-        val canvasY = toCanvasY(screenY)
+        val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         currentPath.lineTo(canvasX, canvasY)
         strokes.add(Stroke(currentPath, currentPaint))
         currentPath = Path()
@@ -267,6 +275,7 @@ class DrawingView @JvmOverloads constructor(
         if (canPanDuringTransform()) {
             viewportOffsetX += (focusX - lastFocusX).toDouble()
             viewportOffsetY += (focusY - lastFocusY).toDouble()
+            updateViewportMatrix()
             invalidate()
         }
         lastFocusX = focusX
@@ -295,9 +304,12 @@ class DrawingView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun toCanvasX(screenX: Float): Float = ((screenX.toDouble() - viewportOffsetX) / viewportScale).toFloat()
-
-    private fun toCanvasY(screenY: Float): Float = ((screenY.toDouble() - viewportOffsetY) / viewportScale).toFloat()
+    private fun mapScreenToCanvas(screenX: Float, screenY: Float): Pair<Float, Float> {
+        mappedPoint[0] = screenX
+        mappedPoint[1] = screenY
+        inverseViewportMatrix.mapPoints(mappedPoint)
+        return mappedPoint[0] to mappedPoint[1]
+    }
 
     private fun isTransformGesture(event: MotionEvent): Boolean {
         return event.pointerCount > 1 || isTransforming || scaleGestureDetector.isInProgress
@@ -331,18 +343,25 @@ class DrawingView @JvmOverloads constructor(
 
             val focusX = detector.focusX.toDouble()
             val focusY = detector.focusY.toDouble()
-            val canvasFocusX = (focusX - viewportOffsetX) / viewportScale
-            val canvasFocusY = (focusY - viewportOffsetY) / viewportScale
+            val (canvasFocusX, canvasFocusY) = mapScreenToCanvas(detector.focusX, detector.focusY)
             val nextScale = viewportScale * scaleFactor
             if (!nextScale.isFinite() || nextScale <= 0.0) return false
 
             viewportScale = nextScale
-            viewportOffsetX = focusX - (canvasFocusX * viewportScale)
-            viewportOffsetY = focusY - (canvasFocusY * viewportScale)
+            viewportOffsetX = focusX - (canvasFocusX.toDouble() * viewportScale)
+            viewportOffsetY = focusY - (canvasFocusY.toDouble() * viewportScale)
+            updateViewportMatrix()
             lastFocusX = detector.focusX
             lastFocusY = detector.focusY
             invalidate()
             return true
         }
+    }
+
+    private fun updateViewportMatrix() {
+        viewportMatrix.reset()
+        viewportMatrix.postScale(viewportScale.toFloat(), viewportScale.toFloat())
+        viewportMatrix.postTranslate(viewportOffsetX.toFloat(), viewportOffsetY.toFloat())
+        viewportMatrix.invert(inverseViewportMatrix)
     }
 }
