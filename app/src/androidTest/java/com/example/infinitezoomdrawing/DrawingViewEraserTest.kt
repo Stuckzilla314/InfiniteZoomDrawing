@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 class DrawingViewEraserTest {
 
     @Test
-    fun eraser_clearsExistingStrokeInsteadOfPaintingBlack() {
+    fun eraser_clearsExistingStroke() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
