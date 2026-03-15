@@ -17,4 +17,13 @@
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
     </style>
+
+    <style name="Widget.InfiniteZoomDrawing.BottomIconButton" parent="Widget.AppCompat.ImageButton">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:scaleType">centerInside</item>
+    </style>
 </resources>

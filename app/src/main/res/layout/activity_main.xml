@@ -52,31 +52,32 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnNew"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
-                android:text="@string/new_drawing"
-                android:textColor="@color/button_text" />
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:contentDescription="@string/new_drawing"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_action_new" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnOpen"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
-                android:text="@string/open_drawing"
-                android:textColor="@color/button_text" />
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:contentDescription="@string/open_drawing"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_action_open" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnSave"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
-                android:text="@string/save_drawing" />
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:contentDescription="@string/save_drawing"
+                android:tint="@color/toolbar_bg"
+                app:srcCompat="@drawable/ic_action_save" />
 
         </LinearLayout>
 
@@ -87,45 +88,41 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnBrushPen"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/brush_pen"
-                android:textColor="@color/button_text" />
+                android:contentDescription="@string/brush_pen"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_tool_pen" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnBrushMarker"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/brush_marker"
-                android:textColor="@color/button_text" />
+                android:contentDescription="@string/brush_marker"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_tool_marker" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnBrushSoft"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/brush_soft"
-                android:textColor="@color/button_text" />
+                android:contentDescription="@string/brush_soft"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_tool_brush" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnBrushEraser"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/brush_eraser"
-                android:textColor="@color/button_text" />
+                android:contentDescription="@string/brush_eraser"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_tool_eraser" />
 
         </LinearLayout>
 
@@ -207,35 +204,32 @@
             android:gravity="center"
             android:orientation="horizontal">
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnUndo"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/undo"
-                android:textColor="@color/button_text" />
+                android:contentDescription="@string/undo"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_action_undo" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnRedo"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/redo"
-                android:textColor="@color/button_text" />
+                android:contentDescription="@string/redo"
+                android:tint="@color/button_text"
+                app:srcCompat="@drawable/ic_action_redo" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatImageButton
                 android:id="@+id/btnClear"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_margin="4dp"
                 android:layout_weight="1"
-                android:text="@string/clear_canvas"
-                android:textColor="@color/color_error" />
+                android:contentDescription="@string/clear_canvas"
+                android:tint="@color/color_error"
+                app:srcCompat="@drawable/ic_action_clear" />
 
         </LinearLayout>
 
