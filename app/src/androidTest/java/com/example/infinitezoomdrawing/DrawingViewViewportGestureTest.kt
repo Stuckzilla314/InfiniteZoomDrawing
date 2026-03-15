@@ -293,7 +293,7 @@ class DrawingViewViewportGestureTest {
 
                 assertTrue(drawingView.requiresCompositingLayerForTesting())
 
-                listOf(8.0, 16.0, 32.0, 48.0, 96.0, 192.0, 384.0).forEach { scale ->
+                listOf(8.0, 16.0, 32.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1_536.0, 3_072.0).forEach { scale ->
                     setAnchoredViewport(scale)
                     val bitmap = drawingView.exportBitmap()
                     try {
@@ -404,7 +404,7 @@ class DrawingViewViewportGestureTest {
 
                 // Check repeated zoom steps around the 32x/64x normalization boundaries while the
                 // overlapping strokes stay pinned to the viewport edge where flicker is easiest to spot.
-                listOf(8.0, 24.0, 31.0, 32.0, 33.0, 63.0, 64.0, 65.0).forEach { scale ->
+                listOf(8.0, 24.0, 31.0, 32.0, 33.0, 63.0, 64.0, 65.0, 128.0, 256.0, 512.0, 1_024.0).forEach { scale ->
                     drawingView.setViewportTransform(scale = scale, offsetX = 0.0, offsetY = 0.0)
                     val bitmap = drawingView.exportBitmap()
                     try {

@@ -519,9 +519,24 @@ class DrawingView @JvmOverloads constructor(
     private fun pathIntersectsVisibleRect(path: Path, paint: Paint, visibleCanvasRect: RectF): Boolean {
         if (path.isEmpty) return false
 
+        val coveragePath = Path()
+        paint.getFillPath(path, coveragePath)
+
+        val coverageBounds = RectF()
+        coveragePath.computeBounds(coverageBounds, true)
+
+        if (
+            coverageBounds.left.isFinite() &&
+            coverageBounds.top.isFinite() &&
+            coverageBounds.right.isFinite() &&
+            coverageBounds.bottom.isFinite() &&
+            !coverageBounds.isEmpty
+        ) {
+            return RectF.intersects(coverageBounds, visibleCanvasRect)
+        }
+
         val pathBounds = RectF()
         path.computeBounds(pathBounds, true)
-
         val strokePadding = maxOf(paint.strokeWidth, 1f)
         if (pathBounds.isEmpty()) {
             pathBounds.set(
