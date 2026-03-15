@@ -18,6 +18,10 @@
 
     <!-- Brush size -->
     <string name="brush_size_label">Size: %d</string>
+    <string name="tool_summary">%1$s · %2$s</string>
+    <string name="show_tools">Show tools</string>
+    <string name="hide_tools">Hide tools</string>
+    <string name="color_palette">Color palette</string>
 
     <!-- Dialogs -->
     <string name="new_drawing_confirm">Start a new drawing? All unsaved changes will be lost.</string>

@@ -45,191 +45,251 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- File Actions Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnNew"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/new_drawing"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_action_new" />
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnOpen"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/open_drawing"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_action_open" />
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnSave"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/save_drawing"
-                app:tint="@color/toolbar_bg"
-                app:srcCompat="@drawable/ic_action_save" />
-
-        </LinearLayout>
-
-        <!-- Brush Type Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnBrushPen"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/brush_pen"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_tool_pen" />
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnBrushMarker"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/brush_marker"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_tool_marker" />
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnBrushSoft"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/brush_soft"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_tool_brush" />
-
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnBrushEraser"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/brush_eraser"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_tool_eraser" />
-
-        </LinearLayout>
-
-        <!-- Color Palette Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- Selected color indicator -->
             <View
                 android:id="@+id/viewSelectedColor"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_margin="6dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="8dp"
                 android:background="@drawable/color_swatch_border" />
 
-            <!-- Color swatches -->
-            <View android:id="@+id/colorSwatch0"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch1"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch2"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch3"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch4"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch5"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch6"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch7"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch8"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch9"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch10"
-                style="@style/ColorSwatch" />
-            <View android:id="@+id/colorSwatch11"
-                style="@style/ColorSwatch" />
-
-        </LinearLayout>
-
-        <!-- Brush Size Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingBottom="4dp">
-
             <TextView
-                android:id="@+id/tvBrushSizeLabel"
+                android:id="@+id/tvToolSummary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                tools:text="Pen • Size: 12" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnToggleTools"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:minWidth="60dp"
-                android:textColor="@color/text_primary"
-                android:textSize="12sp"
-                tools:text="Size: 12" />
-
-            <SeekBar
-                android:id="@+id/seekBarBrushSize"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:max="79"
-                android:progress="11" />
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="0dp"
+                android:text="@string/show_tools"
+                app:icon="@drawable/ic_expand_more"
+                app:iconGravity="textEnd"
+                app:iconTint="@color/toolbar_bg"
+                app:strokeColor="@color/toolbar_bg" />
 
         </LinearLayout>
 
-        <!-- Edit Actions Row -->
         <LinearLayout
+            android:id="@+id/layoutToolsContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:visibility="gone">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnUndo"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/undo"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_action_undo" />
+            <!-- File Actions Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnRedo"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/redo"
-                app:tint="@color/button_text"
-                app:srcCompat="@drawable/ic_action_redo" />
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnNew"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/new_drawing"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_action_new" />
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnClear"
-                style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:contentDescription="@string/clear_canvas"
-                app:tint="@color/color_error"
-                app:srcCompat="@drawable/ic_action_clear" />
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnOpen"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/open_drawing"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_action_open" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnSave"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/save_drawing"
+                    app:tint="@color/toolbar_bg"
+                    app:srcCompat="@drawable/ic_action_save" />
+
+            </LinearLayout>
+
+            <!-- Brush Type Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnBrushPen"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/brush_pen"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_tool_pen" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnBrushMarker"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/brush_marker"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_tool_marker" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnBrushSoft"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/brush_soft"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_tool_brush" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnBrushEraser"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/brush_eraser"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_tool_eraser" />
+
+            </LinearLayout>
+
+            <!-- Color Palette Row -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/color_palette"
+                android:fillViewport="true"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/colorSwatch0"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch1"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch2"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch3"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch4"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch5"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch6"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch7"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch8"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch9"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch10"
+                        style="@style/ColorSwatch" />
+                    <View
+                        android:id="@+id/colorSwatch11"
+                        style="@style/ColorSwatch" />
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Brush Size Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:id="@+id/tvBrushSizeLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:minWidth="60dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    tools:text="Size: 12" />
+
+                <SeekBar
+                    android:id="@+id/seekBarBrushSize"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="79"
+                    android:progress="11" />
+
+            </LinearLayout>
+
+            <!-- Edit Actions Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnUndo"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/undo"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_action_undo" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnRedo"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/redo"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_action_redo" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnClear"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/clear_canvas"
+                    app:tint="@color/color_error"
+                    app:srcCompat="@drawable/ic_action_clear" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

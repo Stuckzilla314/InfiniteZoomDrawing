@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.view.View
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -24,7 +25,12 @@ import java.io.OutputStream
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val DEFAULT_TOOLS_EXPANDED = false
+    }
+
     private lateinit var binding: ActivityMainBinding
+    private var toolsExpanded = DEFAULT_TOOLS_EXPANDED
 
     private val requestPermissionCode = 1001
     private val requestOpenImageCode = 1002
@@ -36,10 +42,12 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
+        setupToolPanelToggle()
         setupBrushSizeSeekBar()
         setupColorPalette()
         setupBrushTypeButtons()
         setupActionButtons()
+        setToolsExpanded(DEFAULT_TOOLS_EXPANDED)
     }
 
     // ── Brush size ────────────────────────────────────────────────────────────
@@ -48,11 +56,13 @@ class MainActivity : AppCompatActivity() {
         // SeekBar range is 0..79; add 1 for actual brush size (1..80)
         binding.seekBarBrushSize.progress = 11
         binding.tvBrushSizeLabel.text = getString(R.string.brush_size_label, 12)
+        updateToolSummary()
         binding.seekBarBrushSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val size = (progress + 1).toFloat()
                 binding.drawingView.brushSize = size
                 binding.tvBrushSizeLabel.text = getString(R.string.brush_size_label, progress + 1)
+                updateToolSummary()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -87,6 +97,7 @@ class MainActivity : AppCompatActivity() {
     private fun selectColor(color: Int) {
         binding.drawingView.brushColor = color
         binding.viewSelectedColor.setBackgroundColor(color)
+        updateToolSummary()
     }
 
     // ── Brush type buttons ────────────────────────────────────────────────────
@@ -104,6 +115,7 @@ class MainActivity : AppCompatActivity() {
                 btn.isSelected = (type == selected)
                 btn.alpha = if (type == selected) 1f else 0.5f
             }
+            updateToolSummary()
         }
 
         buttons.forEach { (btn, type) ->
@@ -115,6 +127,35 @@ class MainActivity : AppCompatActivity() {
 
         // Default selection
         updateSelection(BrushType.PEN)
+    }
+
+    private fun setupToolPanelToggle() {
+        binding.btnToggleTools.setOnClickListener { setToolsExpanded(!toolsExpanded) }
+    }
+
+    private fun setToolsExpanded(expanded: Boolean) {
+        toolsExpanded = expanded
+        binding.layoutToolsContent.visibility = if (expanded) View.VISIBLE else View.GONE
+        binding.btnToggleTools.text = getString(if (expanded) R.string.hide_tools else R.string.show_tools)
+        binding.btnToggleTools.setIconResource(
+            if (expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
+        )
+    }
+
+    private fun updateToolSummary() {
+        val brushLabel = getString(
+            when (binding.drawingView.brushType) {
+                BrushType.PEN -> R.string.brush_pen
+                BrushType.MARKER -> R.string.brush_marker
+                BrushType.BRUSH -> R.string.brush_soft
+                BrushType.ERASER -> R.string.brush_eraser
+            }
+        )
+        binding.tvToolSummary.text = getString(
+            R.string.tool_summary,
+            brushLabel,
+            getString(R.string.brush_size_label, binding.seekBarBrushSize.progress + 1)
+        )
     }
 
     // ── Action buttons (new / save / open / undo / redo / clear) ─────────────
