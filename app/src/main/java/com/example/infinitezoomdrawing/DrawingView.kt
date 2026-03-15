@@ -47,8 +47,12 @@ class DrawingView @JvmOverloads constructor(
     private var _brushSize: Float = 12f
     private var _brushType: BrushType = BrushType.PEN
 
+    private var viewportScale = 1.0
+    private var viewportOffsetX = 0.0
+    private var viewportOffsetY = 0.0
+
     private var currentPath = Path()
-    private var currentPaintViewportScale = 1.0
+    private var currentPaintViewportScale = viewportScale
     private var currentPaint = createPaint()
     private var currentStrokeHasMovement = false
     private var currentStrokeStartScreenX = 0f
@@ -62,9 +66,6 @@ class DrawingView @JvmOverloads constructor(
     private var loadedBitmapY: Float = 0f
     private var loadedBitmapScale: Float = 1f
 
-    private var viewportScale = 1.0
-    private var viewportOffsetX = 0.0
-    private var viewportOffsetY = 0.0
     private var isDrawingStroke = false
     private var isTransforming = false
     private var lastFocusX = 0f
