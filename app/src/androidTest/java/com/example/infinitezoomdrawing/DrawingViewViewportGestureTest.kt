@@ -517,12 +517,12 @@ class DrawingViewViewportGestureTest {
                     focusScreenY
                 )
 
-                listOf(256.0, 512.0, 768.0, 1_024.0).forEach { scale ->
-                    setAnchoredViewport(scale)
+                listOf(256.0, 512.0, 768.0, 1_024.0).forEach { testScale ->
+                    setAnchoredViewport(testScale)
 
-                    val newestHalfWidth = halfScreenStrokeWidth(scale, newestStrokeScale)
-                    val middleHalfWidth = halfScreenStrokeWidth(scale, middleStrokeScale)
-                    val oldestHalfWidth = halfScreenStrokeWidth(scale, oldestStrokeScale)
+                    val newestHalfWidth = halfScreenStrokeWidth(testScale, newestStrokeScale)
+                    val middleHalfWidth = halfScreenStrokeWidth(testScale, middleStrokeScale)
+                    val oldestHalfWidth = halfScreenStrokeWidth(testScale, oldestStrokeScale)
                     val maxVisibleOffset = (focusScreenY - 24f).toDouble()
 
                     val whiteOffset = ((newestHalfWidth + middleHalfWidth) / 2.0)
@@ -535,17 +535,17 @@ class DrawingViewViewportGestureTest {
                     val bitmap = drawingView.exportBitmap()
                     try {
                         assertEquals(
-                            "Expected newest black stroke to stay visible at scale=$scale",
+                            "Expected newest black stroke to stay visible at scale=$testScale",
                             Color.BLACK,
                             bitmap.getPixel(focusScreenX.toInt(), focusScreenY.toInt())
                         )
                         assertEquals(
-                            "Expected middle white stroke to stay visible at scale=$scale",
+                            "Expected middle white stroke to stay visible at scale=$testScale",
                             Color.WHITE,
                             bitmap.getPixel(focusScreenX.toInt(), focusScreenY.toInt() - whiteOffset)
                         )
                         assertEquals(
-                            "Expected oldest black stroke to stay visible at scale=$scale",
+                            "Expected oldest black stroke to stay visible at scale=$testScale",
                             Color.BLACK,
                             bitmap.getPixel(focusScreenX.toInt(), focusScreenY.toInt() - outerBlackOffset)
                         )
