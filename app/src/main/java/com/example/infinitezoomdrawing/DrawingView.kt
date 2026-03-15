@@ -488,12 +488,17 @@ class DrawingView @JvmOverloads constructor(
     }
 
     private fun requiresCompositingLayer(): Boolean {
-        return strokes.any { it.paint.xfermode != null } ||
-            (isDrawingStroke && currentPaint.xfermode != null)
+        return strokes.any { it.paint.usesClearCompositing() } ||
+            (isDrawingStroke && currentPaint.usesClearCompositing())
     }
 
     private fun refreshCurrentPaint() {
         currentPaint = createPaint()
         currentPaintViewportScale = viewportScale
+    }
+
+    private fun Paint.usesClearCompositing(): Boolean {
+        val porterDuffXfermode = xfermode as? PorterDuffXfermode ?: return false
+        return porterDuffXfermode.mode == PorterDuff.Mode.CLEAR
     }
 }
