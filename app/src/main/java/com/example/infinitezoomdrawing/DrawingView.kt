@@ -13,6 +13,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewConfiguration
 
 /**
  * Custom view that provides a drawing canvas with support for multiple brush types,
@@ -32,7 +33,11 @@ class DrawingView @JvmOverloads constructor(
         private const val TARGET_MIN_STABLE_VIEWPORT_SCALE = 1.0 / TARGET_STABLE_VIEWPORT_SCALE
     }
 
-    private data class Stroke(val path: Path, val paint: Paint)
+    private data class Stroke(
+        val path: Path,
+        val paint: Paint,
+        val requiresClearCompositing: Boolean
+    )
 
     private val strokes = mutableListOf<Stroke>()
     private val redoStack = mutableListOf<Stroke>()
@@ -44,6 +49,9 @@ class DrawingView @JvmOverloads constructor(
     private var currentPath = Path()
     private var currentPaintViewportScale = 1.0
     private var currentPaint = createPaint()
+    private var currentStrokeHasMovement = false
+    private var currentStrokeStartScreenX = 0f
+    private var currentStrokeStartScreenY = 0f
 
     private var lastX = 0f
     private var lastY = 0f
@@ -62,6 +70,7 @@ class DrawingView @JvmOverloads constructor(
     private var lastFocusY = 0f
 
     private val scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private val viewportMatrix = Matrix()
 
     init {
@@ -138,12 +147,13 @@ class DrawingView @JvmOverloads constructor(
             }
         }
 
-        val layer = canvas.saveLayer(null, null)
-        drawInViewport(canvas) { viewportCanvas ->
-            for (stroke in strokes) viewportCanvas.drawPath(stroke.path, stroke.paint)
-            viewportCanvas.drawPath(currentPath, currentPaint)
+        if (requiresCompositingLayer()) {
+            val layer = canvas.saveLayer(null, null)
+            drawStrokes(canvas)
+            canvas.restoreToCount(layer)
+        } else {
+            drawStrokes(canvas)
         }
-        canvas.restoreToCount(layer)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -184,6 +194,8 @@ class DrawingView @JvmOverloads constructor(
     internal fun getViewportOffsetX(): Double = viewportOffsetX
 
     internal fun getViewportOffsetY(): Double = viewportOffsetY
+
+    internal fun requiresCompositingLayerForTesting(): Boolean = requiresCompositingLayer()
 
     internal fun setViewportTransform(scale: Double, offsetX: Double, offsetY: Double) {
         if (scale.isFinite() && scale > 0.0 && offsetX.isFinite() && offsetY.isFinite()) {
@@ -251,22 +263,31 @@ class DrawingView @JvmOverloads constructor(
         redoStack.clear()
         if (currentPaintViewportScale != viewportScale) refreshCurrentPaint()
         currentPath = Path()
+        currentStrokeStartScreenX = screenX
+        currentStrokeStartScreenY = screenY
         val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         currentPath.moveTo(canvasX, canvasY)
         lastX = canvasX
         lastY = canvasY
+        currentStrokeHasMovement = false
         isDrawingStroke = true
         parent?.requestDisallowInterceptTouchEvent(true)
     }
 
     private fun updateStroke(screenX: Float, screenY: Float) {
         if (!isDrawingStroke) return
+        if (!currentStrokeHasMovement) {
+            val deltaX = screenX - currentStrokeStartScreenX
+            val deltaY = screenY - currentStrokeStartScreenY
+            if ((deltaX * deltaX) + (deltaY * deltaY) < touchSlop * touchSlop) return
+        }
         val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         val midX = (lastX + canvasX) / 2f
         val midY = (lastY + canvasY) / 2f
         currentPath.quadTo(lastX, lastY, midX, midY)
         lastX = canvasX
         lastY = canvasY
+        currentStrokeHasMovement = true
         invalidate()
     }
 
@@ -274,16 +295,13 @@ class DrawingView @JvmOverloads constructor(
         if (!isDrawingStroke) return
         val (canvasX, canvasY) = mapScreenToCanvas(screenX, screenY)
         currentPath.lineTo(canvasX, canvasY)
-        strokes.add(Stroke(currentPath, currentPaint))
-        currentPath = Path()
-        refreshCurrentPaint()
-        isDrawingStroke = false
+        completeCurrentStroke()
         parent?.requestDisallowInterceptTouchEvent(false)
         invalidate()
     }
 
     private fun beginTransform(event: MotionEvent) {
-        commitCurrentStroke()
+        if (currentStrokeHasMovement) commitCurrentStroke() else discardCurrentStroke()
         isTransforming = true
         lastFocusX = focusX(event)
         lastFocusY = focusY(event)
@@ -309,8 +327,7 @@ class DrawingView @JvmOverloads constructor(
     }
 
     private fun cancelCurrentInteraction() {
-        currentPath = Path()
-        isDrawingStroke = false
+        resetCurrentStroke()
         endTransform()
         invalidate()
     }
@@ -318,11 +335,34 @@ class DrawingView @JvmOverloads constructor(
     private fun commitCurrentStroke() {
         if (!isDrawingStroke) return
         currentPath.lineTo(lastX, lastY)
-        strokes.add(Stroke(currentPath, currentPaint))
-        currentPath = Path()
-        refreshCurrentPaint()
-        isDrawingStroke = false
+        completeCurrentStroke()
         invalidate()
+    }
+
+    private fun completeCurrentStroke() {
+        strokes.add(
+            Stroke(
+                path = currentPath,
+                paint = currentPaint,
+                requiresClearCompositing = currentBrushUsesClearCompositing()
+            )
+        )
+        refreshCurrentPaint()
+        resetCurrentStroke()
+    }
+
+    private fun discardCurrentStroke() {
+        if (!isDrawingStroke) return
+        resetCurrentStroke()
+        invalidate()
+    }
+
+    private fun resetCurrentStroke() {
+        currentPath = Path()
+        currentStrokeHasMovement = false
+        currentStrokeStartScreenX = 0f
+        currentStrokeStartScreenY = 0f
+        isDrawingStroke = false
     }
 
     private fun mapScreenToCanvas(screenX: Float, screenY: Float): Pair<Float, Float> {
@@ -450,8 +490,22 @@ class DrawingView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    private fun drawStrokes(canvas: Canvas) {
+        drawInViewport(canvas) { viewportCanvas ->
+            for (stroke in strokes) viewportCanvas.drawPath(stroke.path, stroke.paint)
+            viewportCanvas.drawPath(currentPath, currentPaint)
+        }
+    }
+
+    private fun requiresCompositingLayer(): Boolean {
+        return strokes.any { it.requiresClearCompositing } ||
+            (isDrawingStroke && currentBrushUsesClearCompositing())
+    }
+
     private fun refreshCurrentPaint() {
         currentPaint = createPaint()
         currentPaintViewportScale = viewportScale
     }
+
+    private fun currentBrushUsesClearCompositing(): Boolean = _brushType == BrushType.ERASER
 }
