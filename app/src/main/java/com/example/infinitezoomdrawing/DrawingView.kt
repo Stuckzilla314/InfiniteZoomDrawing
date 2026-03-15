@@ -128,23 +128,21 @@ class DrawingView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.WHITE)
-        canvas.save()
-        canvas.concat(viewportMatrix)
-        loadedBitmap?.let {
-            canvas.save()
-            canvas.translate(loadedBitmapX, loadedBitmapY)
-            canvas.scale(loadedBitmapScale, loadedBitmapScale)
-            canvas.drawBitmap(it, 0f, 0f, null)
-            canvas.restore()
+        drawInViewport(canvas) { viewportCanvas ->
+            loadedBitmap?.let { bitmap ->
+                viewportCanvas.save()
+                viewportCanvas.translate(loadedBitmapX, loadedBitmapY)
+                viewportCanvas.scale(loadedBitmapScale, loadedBitmapScale)
+                viewportCanvas.drawBitmap(bitmap, 0f, 0f, null)
+                viewportCanvas.restore()
+            }
         }
-        canvas.restore()
 
         val layer = canvas.saveLayer(null, null)
-        canvas.save()
-        canvas.concat(viewportMatrix)
-        for (stroke in strokes) canvas.drawPath(stroke.path, stroke.paint)
-        canvas.drawPath(currentPath, currentPaint)
-        canvas.restore()
+        drawInViewport(canvas) { viewportCanvas ->
+            for (stroke in strokes) viewportCanvas.drawPath(stroke.path, stroke.paint)
+            viewportCanvas.drawPath(currentPath, currentPaint)
+        }
         canvas.restoreToCount(layer)
     }
 
@@ -443,6 +441,13 @@ class DrawingView @JvmOverloads constructor(
         // render math stays simple and touch mapping can use the same affine values directly.
         viewportMatrix.postScale(viewportScale.toFloat(), viewportScale.toFloat())
         viewportMatrix.postTranslate(viewportOffsetX.toFloat(), viewportOffsetY.toFloat())
+    }
+
+    private inline fun drawInViewport(canvas: Canvas, drawBlock: (Canvas) -> Unit) {
+        canvas.save()
+        canvas.concat(viewportMatrix)
+        drawBlock(canvas)
+        canvas.restore()
     }
 
     private fun refreshCurrentPaint() {

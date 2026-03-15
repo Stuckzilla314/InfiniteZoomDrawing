@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -126,8 +127,8 @@ class DrawingViewViewportGestureTest {
             scenario.onActivity { activity ->
                 val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
 
-                assertTrue("DrawingView should be laid out before exporting", drawingView.width > 0)
-                assertTrue("DrawingView should be laid out before exporting", drawingView.height > 0)
+                assertTrue("DrawingView should be laid out before testing", drawingView.width > 0)
+                assertTrue("DrawingView should be laid out before testing", drawingView.height > 0)
 
                 drawingView.setViewportTransform(scale = 8.0, offsetX = 0.0, offsetY = 0.0)
                 drawingView.brushType = BrushType.PEN
@@ -137,17 +138,32 @@ class DrawingViewViewportGestureTest {
                 dispatchStroke(drawingView, 0f, 180f, 160f, 180f)
 
                 val initialBitmap = drawingView.exportBitmap()
-                assertEquals(Color.BLACK, initialBitmap.getPixel(0, 180))
+                try {
+                    assertFalse(initialBitmap.isRecycled)
+                    assertEquals(Color.BLACK, initialBitmap.getPixel(0, 180))
+                } finally {
+                    initialBitmap.recycle()
+                }
 
                 drawingView.setViewportTransform(scale = 24.0, offsetX = 0.0, offsetY = 0.0)
                 val zoomedInBitmap = drawingView.exportBitmap()
-                assertEquals(Color.BLACK, zoomedInBitmap.getPixel(0, 180))
-                assertEquals(Color.BLACK, zoomedInBitmap.getPixel(40, 180))
+                try {
+                    assertFalse(zoomedInBitmap.isRecycled)
+                    assertEquals(Color.BLACK, zoomedInBitmap.getPixel(0, 180))
+                    assertEquals(Color.BLACK, zoomedInBitmap.getPixel(40, 180))
+                } finally {
+                    zoomedInBitmap.recycle()
+                }
 
                 drawingView.setViewportTransform(scale = 4.0, offsetX = 0.0, offsetY = 0.0)
                 val zoomedOutBitmap = drawingView.exportBitmap()
-                assertEquals(Color.BLACK, zoomedOutBitmap.getPixel(0, 180))
-                assertEquals(Color.BLACK, zoomedOutBitmap.getPixel(20, 180))
+                try {
+                    assertFalse(zoomedOutBitmap.isRecycled)
+                    assertEquals(Color.BLACK, zoomedOutBitmap.getPixel(0, 180))
+                    assertEquals(Color.BLACK, zoomedOutBitmap.getPixel(20, 180))
+                } finally {
+                    zoomedOutBitmap.recycle()
+                }
             }
         }
     }
