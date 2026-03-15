@@ -324,7 +324,7 @@ class DrawingViewViewportGestureTest {
                 val focusScreenY = drawingView.height / 2f
                 val focusCanvasX = 12.0
                 val focusCanvasY = 12.0
-                val strokeHalfWidth = 220f
+                val strokeHalfLength = 220f
 
                 fun setAnchoredViewport(scale: Double) {
                     drawingView.setViewportTransform(
@@ -340,18 +340,18 @@ class DrawingViewViewportGestureTest {
                 drawingView.brushColor = Color.GREEN
                 dispatchStroke(
                     drawingView,
-                    focusScreenX - strokeHalfWidth,
+                    focusScreenX - strokeHalfLength,
                     focusScreenY,
-                    focusScreenX + strokeHalfWidth,
+                    focusScreenX + strokeHalfLength,
                     focusScreenY
                 )
 
                 drawingView.brushColor = Color.BLACK
                 dispatchStroke(
                     drawingView,
-                    focusScreenX - strokeHalfWidth,
+                    focusScreenX - strokeHalfLength,
                     focusScreenY,
-                    focusScreenX + strokeHalfWidth,
+                    focusScreenX + strokeHalfLength,
                     focusScreenY
                 )
 
