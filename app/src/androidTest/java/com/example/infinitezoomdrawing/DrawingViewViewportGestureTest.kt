@@ -316,6 +316,122 @@ class DrawingViewViewportGestureTest {
     }
 
     @Test
+    fun zoomNormalizationThreshold_keepsTopColorStableAcrossAdjacentScales() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+                val focusScreenX = drawingView.width / 2f
+                val focusScreenY = drawingView.height / 2f
+                val focusCanvasX = 12.0
+                val focusCanvasY = 12.0
+                val strokeHalfLength = 220f
+
+                fun setAnchoredViewport(scale: Double) {
+                    drawingView.setViewportTransform(
+                        scale = scale,
+                        offsetX = focusScreenX - (focusCanvasX * scale),
+                        offsetY = focusScreenY - (focusCanvasY * scale)
+                    )
+                }
+
+                setAnchoredViewport(scale = 32.0)
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushSize = 96f
+                drawingView.brushColor = Color.GREEN
+                dispatchStroke(
+                    drawingView,
+                    focusScreenX - strokeHalfLength,
+                    focusScreenY,
+                    focusScreenX + strokeHalfLength,
+                    focusScreenY
+                )
+
+                drawingView.brushColor = Color.BLACK
+                dispatchStroke(
+                    drawingView,
+                    focusScreenX - strokeHalfLength,
+                    focusScreenY,
+                    focusScreenX + strokeHalfLength,
+                    focusScreenY
+                )
+
+                drawingView.brushType = BrushType.ERASER
+                drawingView.brushSize = 24f
+                dispatchStroke(drawingView, 48f, 48f, 96f, 48f)
+
+                assertTrue(drawingView.requiresCompositingLayerForTesting())
+
+                // Probe adjacent scales around the 64x normalization boundary where rebasing occurs,
+                // plus a couple of larger post-rebase scales to catch transient top-color flicker.
+                listOf(60.0, 63.0, 64.0, 65.0, 66.0, 96.0, 128.0).forEach { scale ->
+                    setAnchoredViewport(scale)
+                    val bitmap = drawingView.exportBitmap()
+                    try {
+                        listOf(-120, 0, 120).forEach { xOffset ->
+                            assertEquals(
+                                "Expected top-most black stroke to remain stable at scale=$scale xOffset=$xOffset",
+                                Color.BLACK,
+                                bitmap.getPixel((focusScreenX + xOffset).toInt(), focusScreenY.toInt())
+                            )
+                        }
+                        assertEquals(
+                            "Expected untouched background to remain white at scale=$scale",
+                            Color.WHITE,
+                            bitmap.getPixel(40, 40)
+                        )
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun repeatedZoomAtViewportEdge_keepsTopColorStable() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.setViewportTransform(scale = 8.0, offsetX = 0.0, offsetY = 0.0)
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushSize = 64f
+                drawingView.brushColor = Color.RED
+                dispatchStroke(drawingView, 0f, 180f, 180f, 180f)
+
+                drawingView.brushColor = Color.BLUE
+                dispatchStroke(drawingView, 0f, 180f, 180f, 180f)
+
+                // Check repeated zoom steps around the 32x/64x normalization boundaries while the
+                // overlapping strokes stay pinned to the viewport edge where flicker is easiest to spot.
+                listOf(8.0, 24.0, 31.0, 32.0, 33.0, 63.0, 64.0, 65.0).forEach { scale ->
+                    drawingView.setViewportTransform(scale = scale, offsetX = 0.0, offsetY = 0.0)
+                    val bitmap = drawingView.exportBitmap()
+                    try {
+                        assertEquals(
+                            "Expected viewport edge pixel to keep the top-most blue stroke at scale=$scale",
+                            Color.BLUE,
+                            bitmap.getPixel(0, 180)
+                        )
+                        assertEquals(
+                            "Expected nearby edge sample to keep the top-most blue stroke at scale=$scale",
+                            Color.BLUE,
+                            bitmap.getPixel(32, 180)
+                        )
+                        assertEquals(
+                            "Expected far background to remain white at scale=$scale",
+                            Color.WHITE,
+                            bitmap.getPixel(bitmap.width - 40, 40)
+                        )
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun deepZoomOffscreenStrokes_doNotTintBlankBackground() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
