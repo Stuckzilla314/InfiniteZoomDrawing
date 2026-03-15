@@ -25,8 +25,12 @@ import java.io.OutputStream
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val DEFAULT_TOOLS_EXPANDED = false
+    }
+
     private lateinit var binding: ActivityMainBinding
-    private var toolsExpanded = false
+    private var toolsExpanded = DEFAULT_TOOLS_EXPANDED
 
     private val requestPermissionCode = 1001
     private val requestOpenImageCode = 1002
@@ -43,7 +47,7 @@ class MainActivity : AppCompatActivity() {
         setupColorPalette()
         setupBrushTypeButtons()
         setupActionButtons()
-        setToolsExpanded(false)
+        setToolsExpanded(DEFAULT_TOOLS_EXPANDED)
     }
 
     // ── Brush size ────────────────────────────────────────────────────────────
@@ -133,9 +137,8 @@ class MainActivity : AppCompatActivity() {
         toolsExpanded = expanded
         binding.layoutToolsContent.visibility = if (expanded) View.VISIBLE else View.GONE
         binding.btnToggleTools.text = getString(if (expanded) R.string.hide_tools else R.string.show_tools)
-        binding.btnToggleTools.contentDescription = binding.btnToggleTools.text
         binding.btnToggleTools.setIconResource(
-            if (expanded) android.R.drawable.arrow_up_float else android.R.drawable.arrow_down_float
+            if (expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
         )
     }
 
@@ -151,7 +154,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvToolSummary.text = getString(
             R.string.tool_summary,
             brushLabel,
-            getString(R.string.brush_size_label, binding.drawingView.brushSize.toInt())
+            getString(R.string.brush_size_label, binding.seekBarBrushSize.progress + 1)
         )
     }
 

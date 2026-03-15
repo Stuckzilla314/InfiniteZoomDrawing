@@ -3,6 +3,7 @@ package com.example.infinitezoomdrawing
 import android.widget.ImageButton
 import android.widget.TextView
 import android.view.View
+import com.google.android.material.button.MaterialButton
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -54,7 +55,7 @@ class MainActivityLaunchTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val toolsContent = activity.findViewById<View>(R.id.layoutToolsContent)
-                val toggleButton = activity.findViewById<TextView>(R.id.btnToggleTools)
+                val toggleButton = activity.findViewById<MaterialButton>(R.id.btnToggleTools)
                 val summary = activity.findViewById<TextView>(R.id.tvToolSummary)
 
                 assertNotNull(toolsContent)

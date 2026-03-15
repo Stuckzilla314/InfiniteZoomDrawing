@@ -78,7 +78,7 @@
                 android:insetBottom="0dp"
                 android:minHeight="0dp"
                 android:text="@string/show_tools"
-                app:icon="@android:drawable/arrow_down_float"
+                app:icon="@drawable/ic_expand_more"
                 app:iconGravity="textEnd"
                 app:iconTint="@color/toolbar_bg"
                 app:strokeColor="@color/toolbar_bg" />
@@ -177,6 +177,7 @@
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:contentDescription="@string/color_palette"
                 android:fillViewport="true"
                 android:scrollbars="none">
 
