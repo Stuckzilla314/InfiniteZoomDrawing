@@ -143,12 +143,13 @@ class DrawingView @JvmOverloads constructor(
             }
         }
 
-        val layer = canvas.saveLayer(null, null)
-        drawInViewport(canvas) { viewportCanvas ->
-            for (stroke in strokes) viewportCanvas.drawPath(stroke.path, stroke.paint)
-            viewportCanvas.drawPath(currentPath, currentPaint)
+        if (requiresCompositingLayer()) {
+            val layer = canvas.saveLayer(null, null)
+            drawStrokes(canvas)
+            canvas.restoreToCount(layer)
+        } else {
+            drawStrokes(canvas)
         }
-        canvas.restoreToCount(layer)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -189,6 +190,8 @@ class DrawingView @JvmOverloads constructor(
     internal fun getViewportOffsetX(): Double = viewportOffsetX
 
     internal fun getViewportOffsetY(): Double = viewportOffsetY
+
+    internal fun requiresCompositingLayerForTesting(): Boolean = requiresCompositingLayer()
 
     internal fun setViewportTransform(scale: Double, offsetX: Double, offsetY: Double) {
         if (scale.isFinite() && scale > 0.0 && offsetX.isFinite() && offsetY.isFinite()) {
@@ -475,6 +478,18 @@ class DrawingView @JvmOverloads constructor(
         canvas.concat(viewportMatrix)
         drawBlock(canvas)
         canvas.restore()
+    }
+
+    private fun drawStrokes(canvas: Canvas) {
+        drawInViewport(canvas) { viewportCanvas ->
+            for (stroke in strokes) viewportCanvas.drawPath(stroke.path, stroke.paint)
+            viewportCanvas.drawPath(currentPath, currentPaint)
+        }
+    }
+
+    private fun requiresCompositingLayer(): Boolean {
+        return strokes.any { it.paint.xfermode != null } ||
+            (isDrawingStroke && currentPaint.xfermode != null)
     }
 
     private fun refreshCurrentPaint() {

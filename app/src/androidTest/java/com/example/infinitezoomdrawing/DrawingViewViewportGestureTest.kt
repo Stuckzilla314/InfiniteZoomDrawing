@@ -209,6 +209,38 @@ class DrawingViewViewportGestureTest {
     }
 
     @Test
+    fun deepZoomColorChange_preservesWhiteBackground() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.setViewportTransform(scale = 32.0, offsetX = 0.0, offsetY = 0.0)
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushColor = Color.BLACK
+                drawingView.brushSize = 24f
+                dispatchStroke(drawingView, 160f, 180f, 240f, 180f)
+
+                drawingView.brushColor = Color.BLUE
+                drawingView.setViewportTransform(scale = 96.0, offsetX = 0.0, offsetY = 0.0)
+
+                assertFalse(drawingView.requiresCompositingLayerForTesting())
+
+                dispatchStroke(drawingView, 720f, 240f, 840f, 240f)
+                assertFalse(drawingView.requiresCompositingLayerForTesting())
+
+                val bitmap = drawingView.exportBitmap()
+                try {
+                    assertEquals(Color.BLACK, bitmap.getPixel(600, 180))
+                    assertEquals(Color.BLUE, bitmap.getPixel(780, 240))
+                    assertEquals(Color.WHITE, bitmap.getPixel(320, 180))
+                } finally {
+                    bitmap.recycle()
+                }
+            }
+        }
+    }
+
+    @Test
     fun zoomChanges_keepStrokeVisibleAtViewportEdge() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
