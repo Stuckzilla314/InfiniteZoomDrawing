@@ -249,6 +249,33 @@ class DrawingViewViewportGestureTest {
     }
 
     @Test
+    fun deepZoomOffscreenStrokes_doNotTintBlankBackground() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushSize = 24f
+                drawingView.brushColor = Color.BLACK
+                dispatchStroke(drawingView, 160f, 180f, 260f, 180f)
+                drawingView.brushColor = Color.BLUE
+                dispatchStroke(drawingView, 260f, 280f, 360f, 280f)
+
+                drawingView.setViewportTransform(scale = 50.0, offsetX = 10_000.0, offsetY = 10_000.0)
+
+                val bitmap = drawingView.exportBitmap()
+                try {
+                    assertEquals(Color.WHITE, bitmap.getPixel(40, 40))
+                    assertEquals(Color.WHITE, bitmap.getPixel(bitmap.width / 2, bitmap.height / 2))
+                    assertEquals(Color.WHITE, bitmap.getPixel(bitmap.width - 40, bitmap.height - 40))
+                } finally {
+                    bitmap.recycle()
+                }
+            }
+        }
+    }
+
+    @Test
     fun zoomChanges_keepStrokeVisibleAtViewportEdge() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
