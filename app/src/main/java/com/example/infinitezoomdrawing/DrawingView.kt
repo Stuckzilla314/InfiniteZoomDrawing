@@ -33,7 +33,11 @@ class DrawingView @JvmOverloads constructor(
         private const val TARGET_MIN_STABLE_VIEWPORT_SCALE = 1.0 / TARGET_STABLE_VIEWPORT_SCALE
     }
 
-    private data class Stroke(val path: Path, val paint: Paint)
+    private data class Stroke(
+        val path: Path,
+        val paint: Paint,
+        val requiresClearCompositing: Boolean
+    )
 
     private val strokes = mutableListOf<Stroke>()
     private val redoStack = mutableListOf<Stroke>()
@@ -336,7 +340,13 @@ class DrawingView @JvmOverloads constructor(
     }
 
     private fun completeCurrentStroke() {
-        strokes.add(Stroke(currentPath, currentPaint))
+        strokes.add(
+            Stroke(
+                path = currentPath,
+                paint = currentPaint,
+                requiresClearCompositing = currentBrushUsesClearCompositing()
+            )
+        )
         refreshCurrentPaint()
         resetCurrentStroke()
     }
@@ -488,8 +498,8 @@ class DrawingView @JvmOverloads constructor(
     }
 
     private fun requiresCompositingLayer(): Boolean {
-        return strokes.any { it.paint.usesClearCompositing() } ||
-            (isDrawingStroke && currentPaint.usesClearCompositing())
+        return strokes.any { it.requiresClearCompositing } ||
+            (isDrawingStroke && currentBrushUsesClearCompositing())
     }
 
     private fun refreshCurrentPaint() {
@@ -497,7 +507,5 @@ class DrawingView @JvmOverloads constructor(
         currentPaintViewportScale = viewportScale
     }
 
-    private fun Paint.usesClearCompositing(): Boolean {
-        return color == Color.TRANSPARENT && xfermode is PorterDuffXfermode
-    }
+    private fun currentBrushUsesClearCompositing(): Boolean = _brushType == BrushType.ERASER
 }
