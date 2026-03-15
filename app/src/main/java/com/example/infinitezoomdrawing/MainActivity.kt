@@ -28,11 +28,10 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val DEFAULT_TOOLS_EXPANDED = false
-        private const val LOG_BASE_TWO = 0.6931471805599453
 
         internal fun calculateZoomMeterValue(scale: Double): Double {
             if (!scale.isFinite() || scale <= 0.0) return 0.0
-            return ln(scale) / LOG_BASE_TWO
+            return ln(scale) / ln(2.0)
         }
     }
 
