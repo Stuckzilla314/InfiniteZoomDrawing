@@ -143,6 +143,27 @@ class DrawingView @JvmOverloads constructor(
         if (requiresCompositingLayer()) {
             val layer = canvas.saveLayer(null, null)
             drawCanvasBackdrop(canvas, visibleCanvasRect)
+        canvas.drawColor(Color.WHITE)
+        val visibleCanvasRect = calculateVisibleCanvasRect()
+        drawInViewport(canvas) { viewportCanvas ->
+            loadedBitmap?.let { bitmap ->
+                val bitmapBounds = RectF(
+                    loadedBitmapX,
+                    loadedBitmapY,
+                    loadedBitmapX + (bitmap.width * loadedBitmapScale),
+                    loadedBitmapY + (bitmap.height * loadedBitmapScale)
+                )
+                if (!RectF.intersects(bitmapBounds, visibleCanvasRect)) return@let
+                viewportCanvas.save()
+                viewportCanvas.translate(loadedBitmapX, loadedBitmapY)
+                viewportCanvas.scale(loadedBitmapScale, loadedBitmapScale)
+                viewportCanvas.drawBitmap(bitmap, 0f, 0f, null)
+                viewportCanvas.restore()
+            }
+        }
+
+        if (requiresCompositingLayer()) {
+            val layer = canvas.saveLayer(null, null)
             drawStrokes(canvas, visibleCanvasRect)
             canvas.restoreToCount(layer)
         } else {
@@ -524,6 +545,40 @@ class DrawingView @JvmOverloads constructor(
 
         val strokePadding = maxOf(paint.strokeWidth, 1f)
         if (pathBounds.isEmpty()) {
+            pathBounds.set(
+                pathBounds.left - strokePadding,
+                pathBounds.top - strokePadding,
+                pathBounds.right + strokePadding,
+                pathBounds.bottom + strokePadding
+            )
+        } else {
+            pathBounds.inset(-strokePadding, -strokePadding)
+        }
+        return RectF.intersects(pathBounds, visibleCanvasRect)
+    }
+
+    private fun drawStrokes(canvas: Canvas, visibleCanvasRect: RectF) {
+        drawInViewport(canvas) { viewportCanvas ->
+    private fun calculateVisibleCanvasRect(): RectF {
+        val (topLeftX, topLeftY) = mapScreenToCanvas(0f, 0f)
+        val (bottomRightX, bottomRightY) = mapScreenToCanvas(width.toFloat(), height.toFloat())
+        val overscan = (2.0 / viewportScale.coerceAtLeast(MIN_VIEWPORT_SCALE_FOR_BRUSH_CALC)).toFloat()
+        return RectF(
+            minOf(topLeftX, bottomRightX) - overscan,
+            minOf(topLeftY, bottomRightY) - overscan,
+            maxOf(topLeftX, bottomRightX) + overscan,
+            maxOf(topLeftY, bottomRightY) + overscan
+        )
+    }
+
+    private fun pathIntersectsVisibleRect(path: Path, paint: Paint, visibleCanvasRect: RectF): Boolean {
+        if (path.isEmpty) return false
+
+        val pathBounds = RectF()
+        path.computeBounds(pathBounds, true)
+
+        val strokePadding = maxOf(paint.strokeWidth, 1f)
+        if (pathBounds.isEmpty) {
             pathBounds.set(
                 pathBounds.left - strokePadding,
                 pathBounds.top - strokePadding,
