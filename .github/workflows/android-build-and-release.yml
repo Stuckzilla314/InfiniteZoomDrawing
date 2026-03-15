@@ -51,7 +51,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -67,8 +67,13 @@ jobs:
       - name: Prepare release metadata
         id: release_metadata
         run: |
-          echo "tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "name=Main build ${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "tag=PR-${{ github.event.pull_request.number }}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "name=PR #${{ github.event.pull_request.number }} build ${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "name=Main build ${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
