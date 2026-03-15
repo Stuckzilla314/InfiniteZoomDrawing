@@ -137,27 +137,12 @@ class DrawingView @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(Color.WHITE)
         val visibleCanvasRect = calculateVisibleCanvasRect()
-        drawInViewport(canvas) { viewportCanvas ->
-            loadedBitmap?.let { bitmap ->
-                val bitmapBounds = RectF(
-                    loadedBitmapX,
-                    loadedBitmapY,
-                    loadedBitmapX + (bitmap.width * loadedBitmapScale),
-                    loadedBitmapY + (bitmap.height * loadedBitmapScale)
-                )
-                if (!RectF.intersects(bitmapBounds, visibleCanvasRect)) return@let
-                viewportCanvas.save()
-                viewportCanvas.translate(loadedBitmapX, loadedBitmapY)
-                viewportCanvas.scale(loadedBitmapScale, loadedBitmapScale)
-                viewportCanvas.drawBitmap(bitmap, 0f, 0f, null)
-                viewportCanvas.restore()
-            }
-        }
+        drawCanvasBackdrop(canvas, visibleCanvasRect)
 
         if (requiresCompositingLayer()) {
             val layer = canvas.saveLayer(null, null)
+            drawCanvasBackdrop(canvas, visibleCanvasRect)
             drawStrokes(canvas, visibleCanvasRect)
             canvas.restoreToCount(layer)
         } else {
@@ -499,6 +484,26 @@ class DrawingView @JvmOverloads constructor(
         canvas.restore()
     }
 
+    private fun drawCanvasBackdrop(canvas: Canvas, visibleCanvasRect: RectF) {
+        canvas.drawColor(Color.WHITE)
+        drawInViewport(canvas) { viewportCanvas ->
+            loadedBitmap?.let { bitmap ->
+                val bitmapBounds = RectF(
+                    loadedBitmapX,
+                    loadedBitmapY,
+                    loadedBitmapX + (bitmap.width * loadedBitmapScale),
+                    loadedBitmapY + (bitmap.height * loadedBitmapScale)
+                )
+                if (!RectF.intersects(bitmapBounds, visibleCanvasRect)) return@let
+                viewportCanvas.save()
+                viewportCanvas.translate(loadedBitmapX, loadedBitmapY)
+                viewportCanvas.scale(loadedBitmapScale, loadedBitmapScale)
+                viewportCanvas.drawBitmap(bitmap, 0f, 0f, null)
+                viewportCanvas.restore()
+            }
+        }
+    }
+
     private fun calculateVisibleCanvasRect(): RectF {
         val (topLeftX, topLeftY) = mapScreenToCanvas(0f, 0f)
         val (bottomRightX, bottomRightY) = mapScreenToCanvas(width.toFloat(), height.toFloat())
@@ -518,7 +523,7 @@ class DrawingView @JvmOverloads constructor(
         path.computeBounds(pathBounds, true)
 
         val strokePadding = maxOf(paint.strokeWidth, 1f)
-        if (pathBounds.isEmpty) {
+        if (pathBounds.isEmpty()) {
             pathBounds.set(
                 pathBounds.left - strokePadding,
                 pathBounds.top - strokePadding,

@@ -276,6 +276,36 @@ class DrawingViewViewportGestureTest {
     }
 
     @Test
+    fun deepZoomEraser_preservesWhiteBackground() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.setViewportTransform(scale = 96.0, offsetX = 0.0, offsetY = 0.0)
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushColor = Color.BLACK
+                drawingView.brushSize = 24f
+                dispatchStroke(drawingView, 560f, 180f, 840f, 180f)
+
+                drawingView.brushType = BrushType.ERASER
+                drawingView.brushSize = 24f
+
+                assertTrue(drawingView.requiresCompositingLayerForTesting())
+
+                dispatchStroke(drawingView, 720f, 120f, 720f, 320f)
+
+                val bitmap = drawingView.exportBitmap()
+                try {
+                    assertEquals(Color.BLACK, bitmap.getPixel(560, 180))
+                    assertEquals(Color.WHITE, bitmap.getPixel(720, 180))
+                } finally {
+                    bitmap.recycle()
+                }
+            }
+        }
+    }
+
+    @Test
     fun zoomChanges_keepStrokeVisibleAtViewportEdge() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
