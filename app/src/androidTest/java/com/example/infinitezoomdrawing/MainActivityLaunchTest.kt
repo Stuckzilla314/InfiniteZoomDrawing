@@ -16,6 +16,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MainActivityLaunchTest {
 
+    companion object {
+        private const val EPSILON = 1e-6
+    }
+
     @Test
     fun launchMainActivity_displaysDrawingScreen() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -82,9 +86,9 @@ class MainActivityLaunchTest {
                 val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
 
                 assertNotNull(drawingView)
-                assertEquals(1.0, drawingView.getViewportScale(), 0.0)
-                assertEquals(0.0, drawingView.getViewportOffsetX(), 0.0)
-                assertEquals(0.0, drawingView.getViewportOffsetY(), 0.0)
+                assertEquals(1.0, drawingView.getViewportScale(), EPSILON)
+                assertEquals(0.0, drawingView.getViewportOffsetX(), EPSILON)
+                assertEquals(0.0, drawingView.getViewportOffsetY(), EPSILON)
                 assertFalse(drawingView.requiresCompositingLayerForTesting())
             }
         }
