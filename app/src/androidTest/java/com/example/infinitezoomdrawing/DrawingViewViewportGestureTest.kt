@@ -122,6 +122,93 @@ class DrawingViewViewportGestureTest {
     }
 
     @Test
+    fun pinchStart_doesNotCommitZeroLengthStrokeBeforeTransformBegins() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushColor = Color.BLACK
+                drawingView.brushSize = 24f
+                dispatchStroke(drawingView, 80f, 180f, 240f, 180f)
+
+                drawingView.brushColor = Color.WHITE
+
+                val downTime = SystemClock.uptimeMillis()
+                obtainPointerEvent(
+                    downTime = downTime,
+                    eventTime = downTime,
+                    action = MotionEvent.ACTION_DOWN,
+                    points = listOf(Point(160f, 180f))
+                ).also {
+                    drawingView.onTouchEvent(it)
+                    it.recycle()
+                }
+                obtainPointerEvent(
+                    downTime = downTime,
+                    eventTime = downTime + 16L,
+                    action = MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                    points = listOf(Point(160f, 180f), Point(240f, 180f))
+                ).also {
+                    drawingView.onTouchEvent(it)
+                    it.recycle()
+                }
+
+                val bitmap = drawingView.exportBitmap()
+                assertEquals(Color.BLACK, bitmap.getPixel(160, 180))
+            }
+        }
+    }
+
+    @Test
+    fun pinchStart_doesNotCommitTinyStrokeBeforeTransformBegins() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushColor = Color.BLACK
+                drawingView.brushSize = 24f
+                dispatchStroke(drawingView, 80f, 180f, 240f, 180f)
+
+                drawingView.brushColor = Color.WHITE
+
+                val downTime = SystemClock.uptimeMillis()
+                obtainPointerEvent(
+                    downTime = downTime,
+                    eventTime = downTime,
+                    action = MotionEvent.ACTION_DOWN,
+                    points = listOf(Point(160f, 180f))
+                ).also {
+                    drawingView.onTouchEvent(it)
+                    it.recycle()
+                }
+                obtainPointerEvent(
+                    downTime = downTime,
+                    eventTime = downTime + 8L,
+                    action = MotionEvent.ACTION_MOVE,
+                    points = listOf(Point(162f, 180f))
+                ).also {
+                    drawingView.onTouchEvent(it)
+                    it.recycle()
+                }
+                obtainPointerEvent(
+                    downTime = downTime,
+                    eventTime = downTime + 16L,
+                    action = MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                    points = listOf(Point(162f, 180f), Point(240f, 180f))
+                ).also {
+                    drawingView.onTouchEvent(it)
+                    it.recycle()
+                }
+
+                val bitmap = drawingView.exportBitmap()
+                assertEquals(Color.BLACK, bitmap.getPixel(160, 180))
+            }
+        }
+    }
+
+    @Test
     fun zoomChanges_keepStrokeVisibleAtViewportEdge() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
