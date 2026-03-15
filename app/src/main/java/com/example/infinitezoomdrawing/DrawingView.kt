@@ -143,7 +143,6 @@ class DrawingView @JvmOverloads constructor(
 
         if (requiresCompositingLayer()) {
             val layer = canvas.saveLayer(null, null)
-            drawCanvasBackdrop(canvas, visibleCanvasRect)
             drawStrokes(canvas, visibleCanvasRect)
             canvas.restoreToCount(layer)
         } else {

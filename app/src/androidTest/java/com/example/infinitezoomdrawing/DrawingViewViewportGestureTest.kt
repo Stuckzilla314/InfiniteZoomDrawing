@@ -249,6 +249,73 @@ class DrawingViewViewportGestureTest {
     }
 
     @Test
+    fun repeatedDeepZoom_keepsTopColorStableDuringCompositing() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+                val focusScreenX = drawingView.width / 2f
+                val focusScreenY = drawingView.height / 2f
+                val focusCanvasX = 12.0
+                val focusCanvasY = 12.0
+
+                fun setAnchoredViewport(scale: Double) {
+                    drawingView.setViewportTransform(
+                        scale = scale,
+                        offsetX = focusScreenX - (focusCanvasX * scale),
+                        offsetY = focusScreenY - (focusCanvasY * scale)
+                    )
+                }
+
+                setAnchoredViewport(scale = 8.0)
+                drawingView.brushType = BrushType.PEN
+                drawingView.brushSize = 80f
+                drawingView.brushColor = Color.GREEN
+                dispatchStroke(
+                    drawingView,
+                    focusScreenX - 160f,
+                    focusScreenY,
+                    focusScreenX + 160f,
+                    focusScreenY
+                )
+
+                drawingView.brushColor = Color.BLACK
+                dispatchStroke(
+                    drawingView,
+                    focusScreenX - 160f,
+                    focusScreenY,
+                    focusScreenX + 160f,
+                    focusScreenY
+                )
+
+                drawingView.brushType = BrushType.ERASER
+                drawingView.brushSize = 24f
+                dispatchStroke(drawingView, 48f, 48f, 96f, 48f)
+
+                assertTrue(drawingView.requiresCompositingLayerForTesting())
+
+                listOf(8.0, 16.0, 32.0, 48.0, 96.0, 192.0, 384.0).forEach { scale ->
+                    setAnchoredViewport(scale)
+                    val bitmap = drawingView.exportBitmap()
+                    try {
+                        assertEquals(
+                            "Expected top-most black stroke to remain stable at scale=$scale",
+                            Color.BLACK,
+                            bitmap.getPixel(focusScreenX.toInt(), focusScreenY.toInt())
+                        )
+                        assertEquals(
+                            "Expected untouched background to remain white at scale=$scale",
+                            Color.WHITE,
+                            bitmap.getPixel(40, 40)
+                        )
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun deepZoomOffscreenStrokes_doNotTintBlankBackground() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
