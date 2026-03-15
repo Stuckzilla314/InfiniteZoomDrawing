@@ -10,6 +10,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 
 /**
@@ -40,6 +41,16 @@ class DrawingView @JvmOverloads constructor(
     private var loadedBitmap: Bitmap? = null
     private var loadedBitmapX: Float = 0f
     private var loadedBitmapY: Float = 0f
+
+    private var viewportScale = 1.0
+    private var viewportOffsetX = 0.0
+    private var viewportOffsetY = 0.0
+    private var isDrawingStroke = false
+    private var isTransforming = false
+    private var lastFocusX = 0f
+    private var lastFocusY = 0f
+
+    private val scaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
 
     var brushColor: Int
         get() = _brushColor
@@ -97,41 +108,63 @@ class DrawingView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         canvas.drawColor(Color.WHITE)
+        canvas.save()
+        canvas.translate(viewportOffsetX.toFloat(), viewportOffsetY.toFloat())
+        canvas.scale(viewportScale.toFloat(), viewportScale.toFloat())
         loadedBitmap?.let { canvas.drawBitmap(it, loadedBitmapX, loadedBitmapY, null) }
         val layer = canvas.saveLayer(null, null)
         for (stroke in strokes) canvas.drawPath(stroke.path, stroke.paint)
         canvas.drawPath(currentPath, currentPaint)
         canvas.restoreToCount(layer)
+        canvas.restore()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val x = event.x
-        val y = event.y
-        when (event.action) {
+        scaleGestureDetector.onTouchEvent(event)
+        when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                redoStack.clear()
-                currentPath = Path()
-                currentPath.moveTo(x, y)
-                lastX = x
-                lastY = y
+                startStroke(event.x, event.y)
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                beginTransform(event)
             }
             MotionEvent.ACTION_MOVE -> {
-                val midX = (lastX + x) / 2f
-                val midY = (lastY + y) / 2f
-                currentPath.quadTo(lastX, lastY, midX, midY)
-                lastX = x
-                lastY = y
-                invalidate()
+                if (event.pointerCount > 1 || isTransforming || scaleGestureDetector.isInProgress) {
+                    updateTransform(event)
+                } else {
+                    updateStroke(event.x, event.y)
+                }
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                if (event.pointerCount - 1 < 2) endTransform()
             }
             MotionEvent.ACTION_UP -> {
-                currentPath.lineTo(x, y)
-                strokes.add(Stroke(currentPath, currentPaint))
-                currentPath = Path()
-                currentPaint = createPaint()
-                invalidate()
+                if (!isTransforming && !scaleGestureDetector.isInProgress) {
+                    finishStroke(event.x, event.y)
+                } else {
+                    endTransform()
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                cancelCurrentInteraction()
             }
         }
         return true
+    }
+
+    internal fun getViewportScale(): Double = viewportScale
+
+    internal fun getViewportOffsetX(): Double = viewportOffsetX
+
+    internal fun getViewportOffsetY(): Double = viewportOffsetY
+
+    internal fun setViewportTransform(scale: Double, offsetX: Double, offsetY: Double) {
+        if (scale.isFinite() && scale > 0.0) {
+            viewportScale = scale
+            viewportOffsetX = offsetX
+            viewportOffsetY = offsetY
+            invalidate()
+        }
     }
 
     fun undo() {
@@ -181,5 +214,129 @@ class DrawingView @JvmOverloads constructor(
         loadedBitmapX = (width - scaledBitmap.width) / 2f
         loadedBitmapY = (height - scaledBitmap.height) / 2f
         invalidate()
+    }
+
+    private fun startStroke(screenX: Float, screenY: Float) {
+        redoStack.clear()
+        currentPath = Path()
+        val canvasX = toCanvasX(screenX)
+        val canvasY = toCanvasY(screenY)
+        currentPath.moveTo(canvasX, canvasY)
+        lastX = canvasX
+        lastY = canvasY
+        isDrawingStroke = true
+        parent?.requestDisallowInterceptTouchEvent(true)
+    }
+
+    private fun updateStroke(screenX: Float, screenY: Float) {
+        if (!isDrawingStroke) return
+        val canvasX = toCanvasX(screenX)
+        val canvasY = toCanvasY(screenY)
+        val midX = (lastX + canvasX) / 2f
+        val midY = (lastY + canvasY) / 2f
+        currentPath.quadTo(lastX, lastY, midX, midY)
+        lastX = canvasX
+        lastY = canvasY
+        invalidate()
+    }
+
+    private fun finishStroke(screenX: Float, screenY: Float) {
+        if (!isDrawingStroke) return
+        val canvasX = toCanvasX(screenX)
+        val canvasY = toCanvasY(screenY)
+        currentPath.lineTo(canvasX, canvasY)
+        strokes.add(Stroke(currentPath, currentPaint))
+        currentPath = Path()
+        currentPaint = createPaint()
+        isDrawingStroke = false
+        parent?.requestDisallowInterceptTouchEvent(false)
+        invalidate()
+    }
+
+    private fun beginTransform(event: MotionEvent) {
+        commitCurrentStroke()
+        isTransforming = true
+        lastFocusX = focusX(event)
+        lastFocusY = focusY(event)
+        parent?.requestDisallowInterceptTouchEvent(true)
+    }
+
+    private fun updateTransform(event: MotionEvent) {
+        val focusX = focusX(event)
+        val focusY = focusY(event)
+        if (isTransforming && !scaleGestureDetector.isInProgress) {
+            viewportOffsetX += (focusX - lastFocusX).toDouble()
+            viewportOffsetY += (focusY - lastFocusY).toDouble()
+            invalidate()
+        }
+        lastFocusX = focusX
+        lastFocusY = focusY
+    }
+
+    private fun endTransform() {
+        isTransforming = false
+        parent?.requestDisallowInterceptTouchEvent(false)
+    }
+
+    private fun cancelCurrentInteraction() {
+        currentPath = Path()
+        isDrawingStroke = false
+        endTransform()
+        invalidate()
+    }
+
+    private fun commitCurrentStroke() {
+        if (!isDrawingStroke) return
+        currentPath.lineTo(lastX, lastY)
+        strokes.add(Stroke(currentPath, currentPaint))
+        currentPath = Path()
+        currentPaint = createPaint()
+        isDrawingStroke = false
+        invalidate()
+    }
+
+    private fun toCanvasX(screenX: Float): Float = ((screenX.toDouble() - viewportOffsetX) / viewportScale).toFloat()
+
+    private fun toCanvasY(screenY: Float): Float = ((screenY.toDouble() - viewportOffsetY) / viewportScale).toFloat()
+
+    private fun focusX(event: MotionEvent): Float {
+        var total = 0f
+        for (index in 0 until event.pointerCount) total += event.getX(index)
+        return total / event.pointerCount
+    }
+
+    private fun focusY(event: MotionEvent): Float {
+        var total = 0f
+        for (index in 0 until event.pointerCount) total += event.getY(index)
+        return total / event.pointerCount
+    }
+
+    private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+            isTransforming = true
+            lastFocusX = detector.focusX
+            lastFocusY = detector.focusY
+            return true
+        }
+
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            val scaleFactor = detector.scaleFactor.toDouble()
+            if (!scaleFactor.isFinite() || scaleFactor <= 0.0) return false
+
+            val focusX = detector.focusX.toDouble()
+            val focusY = detector.focusY.toDouble()
+            val canvasFocusX = (focusX - viewportOffsetX) / viewportScale
+            val canvasFocusY = (focusY - viewportOffsetY) / viewportScale
+            val nextScale = viewportScale * scaleFactor
+            if (!nextScale.isFinite() || nextScale <= 0.0) return false
+
+            viewportScale = nextScale
+            viewportOffsetX = focusX - (canvasFocusX * viewportScale)
+            viewportOffsetY = focusY - (canvasFocusY * viewportScale)
+            lastFocusX = detector.focusX
+            lastFocusY = detector.focusY
+            invalidate()
+            return true
+        }
     }
 }
