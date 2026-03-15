@@ -324,6 +324,8 @@ class DrawingView @JvmOverloads constructor(
     }
 
     private fun mapScreenToCanvas(screenX: Float, screenY: Float): Pair<Float, Float> {
+        // Direct affine math avoids an unnecessary float-matrix inversion and matches
+        // the same screen = (canvas * scale) + offset transform used for rendering.
         return ((screenX.toDouble() - viewportOffsetX) / viewportScale).toFloat() to
             ((screenY.toDouble() - viewportOffsetY) / viewportScale).toFloat()
     }
@@ -391,7 +393,8 @@ class DrawingView @JvmOverloads constructor(
     }
 
     private fun rebaseCanvasContent(scaleFactor: Double, anchorX: Float, anchorY: Float) {
-        if (!scaleFactor.isFinite() || scaleFactor <= 0.0 || scaleFactor == 1.0) return
+        if (!scaleFactor.isFinite() || scaleFactor <= 0.0) return
+        if (scaleFactor == 1.0) return
 
         val transform = Matrix().apply {
             setTranslate(-anchorX, -anchorY)
