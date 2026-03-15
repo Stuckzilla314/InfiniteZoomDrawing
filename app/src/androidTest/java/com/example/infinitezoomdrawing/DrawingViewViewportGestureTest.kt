@@ -155,7 +155,11 @@ class DrawingViewViewportGestureTest {
                 }
 
                 val bitmap = drawingView.exportBitmap()
-                assertEquals(Color.BLACK, bitmap.getPixel(160, 180))
+                try {
+                    assertEquals(Color.BLACK, bitmap.getPixel(160, 180))
+                } finally {
+                    bitmap.recycle()
+                }
             }
         }
     }
@@ -203,7 +207,11 @@ class DrawingViewViewportGestureTest {
                 }
 
                 val bitmap = drawingView.exportBitmap()
-                assertEquals(Color.BLACK, bitmap.getPixel(160, 180))
+                try {
+                    assertEquals(Color.BLACK, bitmap.getPixel(160, 180))
+                } finally {
+                    bitmap.recycle()
+                }
             }
         }
     }
