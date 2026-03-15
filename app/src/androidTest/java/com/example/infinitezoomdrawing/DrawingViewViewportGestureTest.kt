@@ -358,6 +358,8 @@ class DrawingViewViewportGestureTest {
                 drawingView.brushSize = 24f
                 dispatchStroke(drawingView, 48f, 48f, 96f, 48f)
 
+                assertTrue(drawingView.requiresCompositingLayerForTesting())
+
                 listOf(60.0, 63.0, 64.0, 65.0, 66.0, 96.0, 128.0).forEach { scale ->
                     setAnchoredViewport(scale)
                     val bitmap = drawingView.exportBitmap()
