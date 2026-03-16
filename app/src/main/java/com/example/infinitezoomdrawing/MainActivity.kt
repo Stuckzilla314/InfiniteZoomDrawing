@@ -12,7 +12,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
+import android.view.MotionEvent
 import android.view.View
 import android.widget.SeekBar
 import android.widget.Toast
@@ -27,10 +30,15 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val DEFAULT_TOOLS_EXPANDED = false
+        private const val TOOLBAR_ZOOM_FACTOR = 1.15
+        private const val CONTINUOUS_ZOOM_INITIAL_DELAY_MS = 220L
+        private const val CONTINUOUS_ZOOM_REPEAT_DELAY_MS = 90L
     }
 
     private lateinit var binding: ActivityMainBinding
     private var toolsExpanded = DEFAULT_TOOLS_EXPANDED
+    private val zoomHoldHandler = Handler(Looper.getMainLooper())
+    private var activeZoomHoldRunnable: Runnable? = null
 
     private val requestPermissionCode = 1001
     private val requestOpenImageCode = 1002
@@ -158,12 +166,45 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // ── Action buttons (new / save / open / undo / redo / clear) ─────────────
+    // ── Action buttons (new / save / open / zoom / home / undo / redo / clear)
 
     private fun setupActionButtons() {
         binding.btnNew.setOnClickListener { confirmNewDrawing() }
         binding.btnSave.setOnClickListener { saveDrawing() }
         binding.btnOpen.setOnClickListener { requestOpenDrawing() }
+        setupContinuousZoomButton(binding.btnZoomOut, 1.0 / TOOLBAR_ZOOM_FACTOR)
+        setupContinuousZoomButton(binding.btnZoomIn, TOOLBAR_ZOOM_FACTOR)
+        binding.btnHome.setOnClickListener {
+            if (!binding.drawingView.animateReturnHome()) {
+                Toast.makeText(this, R.string.already_home, Toast.LENGTH_SHORT).show()
+            }
+        }
+        binding.btnHome.setOnLongClickListener {
+            when {
+                binding.drawingView.isAtHome() && binding.drawingView.hasHomeCheckpoints() -> {
+                    binding.drawingView.clearHomeCheckpoints()
+                    Toast.makeText(this, R.string.home_checkpoints_cleared, Toast.LENGTH_SHORT).show()
+                }
+                binding.drawingView.isAtHome() -> {
+                    Toast.makeText(this, R.string.already_home, Toast.LENGTH_SHORT).show()
+                }
+                binding.drawingView.addHomeCheckpoint() -> {
+                    Toast.makeText(
+                        this,
+                        getString(
+                            R.string.home_checkpoint_added,
+                            binding.drawingView.getHomeCheckpointCount()
+                        ),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                else -> {
+                    Toast.makeText(this, R.string.home_checkpoint_already_saved, Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+            true
+        }
         binding.btnUndo.setOnClickListener {
             binding.drawingView.undo()
             Toast.makeText(this, R.string.undo, Toast.LENGTH_SHORT).show()
@@ -173,6 +214,54 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.redo, Toast.LENGTH_SHORT).show()
         }
         binding.btnClear.setOnClickListener { confirmClearCanvas() }
+    }
+
+    private fun setupContinuousZoomButton(button: View, zoomFactor: Double) {
+        var repeatedDuringHold = false
+        button.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    repeatedDuringHold = false
+                    startContinuousZoom(zoomFactor) { repeatedDuringHold = true }
+                    false
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    stopContinuousZoom()
+                    false
+                }
+                else -> false
+            }
+        }
+        button.setOnClickListener {
+            if (repeatedDuringHold) {
+                repeatedDuringHold = false
+            } else {
+                binding.drawingView.zoomBy(zoomFactor)
+            }
+        }
+    }
+
+    private fun startContinuousZoom(zoomFactor: Double, onRepeat: () -> Unit) {
+        stopContinuousZoom()
+        val repeatRunnable = object : Runnable {
+            override fun run() {
+                onRepeat()
+                binding.drawingView.zoomBy(zoomFactor)
+                zoomHoldHandler.postDelayed(this, CONTINUOUS_ZOOM_REPEAT_DELAY_MS)
+            }
+        }
+        activeZoomHoldRunnable = repeatRunnable
+        zoomHoldHandler.postDelayed(repeatRunnable, CONTINUOUS_ZOOM_INITIAL_DELAY_MS)
+    }
+
+    private fun stopContinuousZoom() {
+        activeZoomHoldRunnable?.let(zoomHoldHandler::removeCallbacks)
+        activeZoomHoldRunnable = null
+    }
+
+    override fun onDestroy() {
+        stopContinuousZoom()
+        super.onDestroy()
     }
 
     private fun confirmNewDrawing() {
