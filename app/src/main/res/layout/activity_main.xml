@@ -255,6 +255,42 @@
 
             </LinearLayout>
 
+            <!-- Viewport Actions Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnZoomOut"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/zoom_out"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_zoom_out" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnHome"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/return_home"
+                    app:tint="@color/toolbar_bg"
+                    app:srcCompat="@drawable/ic_action_home" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnZoomIn"
+                    style="@style/Widget.InfiniteZoomDrawing.BottomIconButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/zoom_in"
+                    app:tint="@color/button_text"
+                    app:srcCompat="@drawable/ic_zoom_in" />
+
+            </LinearLayout>
+
             <!-- Edit Actions Row -->
             <LinearLayout
                 android:layout_width="match_parent"

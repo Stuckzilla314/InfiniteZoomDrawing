@@ -9,6 +9,9 @@
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
     <string name="clear_canvas">Clear</string>
+    <string name="zoom_out">Zoom out</string>
+    <string name="return_home">Return home</string>
+    <string name="zoom_in">Zoom in</string>
 
     <!-- Brush types -->
     <string name="brush_pen">Pen</string>
@@ -35,4 +38,8 @@
     <string name="open_failed">Failed to open image.</string>
     <string name="permission_granted">Permission granted. Please try again.</string>
     <string name="permission_denied">Permission denied. Cannot access storage.</string>
+    <string name="already_home">Already at the starting view.</string>
+    <string name="home_checkpoint_added">Home checkpoint %1$d saved.</string>
+    <string name="home_checkpoints_cleared">Home checkpoints cleared.</string>
+    <string name="home_checkpoint_already_saved">This home checkpoint is already saved.</string>
 </resources>

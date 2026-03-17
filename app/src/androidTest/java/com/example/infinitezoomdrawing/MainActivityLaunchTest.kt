@@ -41,6 +41,9 @@ class MainActivityLaunchTest {
                     R.id.btnBrushMarker to R.string.brush_marker,
                     R.id.btnBrushSoft to R.string.brush_soft,
                     R.id.btnBrushEraser to R.string.brush_eraser,
+                    R.id.btnZoomOut to R.string.zoom_out,
+                    R.id.btnHome to R.string.return_home,
+                    R.id.btnZoomIn to R.string.zoom_in,
                     R.id.btnUndo to R.string.undo,
                     R.id.btnRedo to R.string.redo,
                     R.id.btnClear to R.string.clear_canvas
@@ -90,6 +93,27 @@ class MainActivityLaunchTest {
                 assertEquals(0.0, drawingView.getViewportOffsetX(), EPSILON)
                 assertEquals(0.0, drawingView.getViewportOffsetY(), EPSILON)
                 assertFalse(drawingView.requiresCompositingLayerForTesting())
+            }
+        }
+    }
+
+    @Test
+    fun launchMainActivity_zoomControlsChangeViewportAndCanSaveCheckpoint() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val drawingView = activity.findViewById<DrawingView>(R.id.drawingView)
+                val zoomInButton = activity.findViewById<ImageButton>(R.id.btnZoomIn)
+                val homeButton = activity.findViewById<ImageButton>(R.id.btnHome)
+
+                drawingView.setViewportTransform(scale = 2.0, offsetX = 120.0, offsetY = 80.0)
+
+                zoomInButton.performClick()
+
+                assertTrue(drawingView.getViewportScale() > 2.0)
+
+                homeButton.performLongClick()
+
+                assertEquals(1, drawingView.getHomeCheckpointCount())
             }
         }
     }

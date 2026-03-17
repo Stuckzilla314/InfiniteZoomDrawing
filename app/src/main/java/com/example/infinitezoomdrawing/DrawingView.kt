@@ -1,5 +1,8 @@
 package com.example.infinitezoomdrawing
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -15,6 +18,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.animation.LinearInterpolator
 
 /**
  * Custom view that provides a drawing canvas with support for multiple brush types,
@@ -32,6 +36,9 @@ class DrawingView @JvmOverloads constructor(
         private const val TARGET_STABLE_VIEWPORT_SCALE = 32.0
         private const val MIN_STABLE_VIEWPORT_SCALE = 1.0 / MAX_STABLE_VIEWPORT_SCALE
         private const val TARGET_MIN_STABLE_VIEWPORT_SCALE = 1.0 / TARGET_STABLE_VIEWPORT_SCALE
+        private const val HOME_RETURN_SEGMENT_DURATION_MS = 450L
+        private const val HOME_RETURN_FINAL_SEGMENT_DURATION_MS = 650L
+        private val INITIAL_HOME_VIEWPORT_STATE = ViewportTransformState(scale = 1.0, offsetX = 0.0, offsetY = 0.0)
     }
 
     private data class Stroke(
@@ -50,6 +57,9 @@ class DrawingView @JvmOverloads constructor(
     private var viewportScale = 1.0
     private var viewportOffsetX = 0.0
     private var viewportOffsetY = 0.0
+    private var homeViewportState = INITIAL_HOME_VIEWPORT_STATE
+    private val homeCheckpoints = mutableListOf<ViewportTransformState>()
+    private var viewportAnimator: ValueAnimator? = null
 
     private var currentPath = Path()
     private var currentPaintViewportScale = viewportScale
@@ -151,6 +161,11 @@ class DrawingView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN ||
+            event.actionMasked == MotionEvent.ACTION_POINTER_DOWN
+        ) {
+            cancelViewportAnimation()
+        }
         scaleGestureDetector.onTouchEvent(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -192,14 +207,140 @@ class DrawingView @JvmOverloads constructor(
     internal fun requiresCompositingLayerForTesting(): Boolean = requiresCompositingLayer()
 
     internal fun setViewportTransform(scale: Double, offsetX: Double, offsetY: Double) {
+        cancelViewportAnimation()
+        applyViewportTransform(scale, offsetX, offsetY)
+    }
+
+    internal fun getHomeCheckpointCount(): Int = homeCheckpoints.size
+
+    fun zoomBy(scaleFactor: Double, focusScreenX: Float = width / 2f, focusScreenY: Float = height / 2f) {
+        cancelViewportAnimation()
+        applyZoom(scaleFactor, focusScreenX, focusScreenY)
+    }
+
+    fun animateReturnHome(): Boolean {
+        cancelViewportAnimation()
+        return playNextHomeReturnSegment(currentViewportState())
+    }
+
+    fun isAtHome(): Boolean = currentViewportState().isApproximately(homeViewportState)
+
+    fun addHomeCheckpoint(): Boolean {
+        cancelViewportAnimation()
+        val checkpoint = currentViewportState()
+        if (checkpoint.isApproximately(homeViewportState)) return false
+        if (homeCheckpoints.any { it.isApproximately(checkpoint) }) return false
+        homeCheckpoints.add(checkpoint)
+        return true
+    }
+
+    fun hasHomeCheckpoints(): Boolean = homeCheckpoints.isNotEmpty()
+
+    fun clearHomeCheckpoints() {
+        homeCheckpoints.clear()
+    }
+
+    override fun onDetachedFromWindow() {
+        cancelViewportAnimation()
+        super.onDetachedFromWindow()
+    }
+
+    private fun currentViewportState(): ViewportTransformState {
+        return ViewportTransformState(
+            scale = viewportScale,
+            offsetX = viewportOffsetX,
+            offsetY = viewportOffsetY
+        )
+    }
+
+    private fun applyViewportTransform(
+        scale: Double,
+        offsetX: Double,
+        offsetY: Double,
+        normalizeViewport: Boolean = true
+    ) {
         if (scale.isFinite() && scale > 0.0 && offsetX.isFinite() && offsetY.isFinite()) {
             viewportScale = scale
             viewportOffsetX = offsetX
             viewportOffsetY = offsetY
             updateViewportMatrix()
-            normalizeViewportScale(width / 2f, height / 2f)
+            if (normalizeViewport) {
+                normalizeViewportScale(width / 2f, height / 2f)
+            }
             invalidate()
         }
+    }
+
+    private fun applyZoom(scaleFactor: Double, focusScreenX: Float, focusScreenY: Float) {
+        if (!scaleFactor.isFinite() || scaleFactor <= 0.0) return
+        val (canvasFocusX, canvasFocusY) = mapScreenToCanvas(focusScreenX, focusScreenY)
+        val nextScale = viewportScale * scaleFactor
+        if (!nextScale.isFinite() || nextScale <= 0.0) return
+        applyViewportTransform(
+            scale = nextScale,
+            offsetX = focusScreenX.toDouble() - (canvasFocusX.toDouble() * nextScale),
+            offsetY = focusScreenY.toDouble() - (canvasFocusY.toDouble() * nextScale)
+        )
+    }
+
+    private fun cancelViewportAnimation() {
+        viewportAnimator?.cancel()
+        viewportAnimator = null
+    }
+
+    private fun playNextHomeReturnSegment(startState: ViewportTransformState): Boolean {
+        val remainingPath = buildReturnHomePath(startState, homeCheckpoints, homeViewportState)
+        val targetState = remainingPath.firstOrNull() ?: return false
+        val isFinalSegment = remainingPath.size == 1
+        val fallbackDuration = if (isFinalSegment) {
+            HOME_RETURN_FINAL_SEGMENT_DURATION_MS
+        } else {
+            HOME_RETURN_SEGMENT_DURATION_MS
+        }
+        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = homeReturnSegmentDurationMs(startState.scale, targetState.scale, fallbackDuration)
+            interpolator = LinearInterpolator()
+            addUpdateListener { valueAnimator ->
+                val interpolatedState = interpolateViewportState(
+                    start = startState,
+                    end = targetState,
+                    fraction = valueAnimator.animatedValue as Float
+                )
+                applyViewportTransform(
+                    scale = interpolatedState.scale,
+                    offsetX = interpolatedState.offsetX,
+                    offsetY = interpolatedState.offsetY,
+                    normalizeViewport = false
+                )
+            }
+        }
+        viewportAnimator = animator
+        animator.addListener(object : AnimatorListenerAdapter() {
+            private var wasCancelled = false
+
+            override fun onAnimationCancel(animation: Animator) {
+                wasCancelled = true
+                if (viewportAnimator === animator) {
+                    viewportAnimator = null
+                }
+            }
+
+            override fun onAnimationEnd(animation: Animator) {
+                if (viewportAnimator === animator) {
+                    viewportAnimator = null
+                }
+                if (!wasCancelled) {
+                    applyViewportTransform(
+                        scale = targetState.scale,
+                        offsetX = targetState.offsetX,
+                        offsetY = targetState.offsetY
+                    )
+                    playNextHomeReturnSegment(currentViewportState())
+                }
+            }
+        })
+        animator.start()
+        return true
     }
 
     fun undo() {
@@ -454,6 +595,11 @@ class DrawingView @JvmOverloads constructor(
         loadedBitmapX = ((loadedBitmapX - anchorX) * scaleFactor).toFloat()
         loadedBitmapY = ((loadedBitmapY - anchorY) * scaleFactor).toFloat()
         loadedBitmapScale *= scaleFactor.toFloat()
+
+        homeViewportState = rebaseViewportState(homeViewportState, scaleFactor, anchorX, anchorY)
+        homeCheckpoints.indices.forEach { index ->
+            homeCheckpoints[index] = rebaseViewportState(homeCheckpoints[index], scaleFactor, anchorX, anchorY)
+        }
 
         viewportOffsetX += viewportScale * anchorX.toDouble()
         viewportOffsetY += viewportScale * anchorY.toDouble()
