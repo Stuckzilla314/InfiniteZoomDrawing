@@ -101,6 +101,44 @@ internal fun homeReturnSegmentDurationMs(
     return max(CONTINUOUS_ZOOM_REPEAT_DELAY_MS, durationMs).roundToLong()
 }
 
+internal fun zoomViewportStateAroundScreenPoint(
+    start: ViewportTransformState,
+    targetScale: Double,
+    focusScreenX: Double,
+    focusScreenY: Double
+): ViewportTransformState {
+    if (!start.isValid()) return start
+    if (!targetScale.isFinite() || targetScale <= 0.0) return start
+
+    val canvasFocusX = (focusScreenX - start.offsetX) / start.scale
+    val canvasFocusY = (focusScreenY - start.offsetY) / start.scale
+    return ViewportTransformState(
+        scale = targetScale,
+        offsetX = focusScreenX - (canvasFocusX * targetScale),
+        offsetY = focusScreenY - (canvasFocusY * targetScale)
+    )
+}
+
+/**
+ * Returns the next home-return segment target.
+ *
+ * When a return-home leg needs to zoom out and pan, this intentionally returns an intermediate
+ * zoom-only state first. The caller then re-evaluates the remaining path from that state so the
+ * following segment can pan to the checkpoint/home target at the new scale.
+ */
+internal fun homeReturnAnimationTarget(
+    start: ViewportTransformState,
+    target: ViewportTransformState,
+    focusScreenX: Double,
+    focusScreenY: Double
+): ViewportTransformState {
+    if (!start.isValid() || !target.isValid()) return target
+    if (target.scale >= start.scale) return target
+
+    val zoomOnlyTarget = zoomViewportStateAroundScreenPoint(start, target.scale, focusScreenX, focusScreenY)
+    return if (zoomOnlyTarget.isApproximately(target)) target else zoomOnlyTarget
+}
+
 internal fun interpolateViewportState(
     start: ViewportTransformState,
     end: ViewportTransformState,

@@ -114,6 +114,23 @@ class ViewportNavigationTest {
     }
 
     @Test
+    fun homeReturnAnimationTarget_computesZoomInPlaceWhenStartScaleExceedsTarget() {
+        val start = ViewportTransformState(scale = 4.0, offsetX = -300.0, offsetY = -200.0)
+        val checkpoint = ViewportTransformState(scale = 2.0, offsetX = 40.0, offsetY = 20.0)
+
+        val animatedTarget = homeReturnAnimationTarget(
+            start = start,
+            target = checkpoint,
+            focusScreenX = 100.0,
+            focusScreenY = 80.0
+        )
+
+        assertEquals(2.0, animatedTarget.scale, 1e-9)
+        assertEquals(-100.0, animatedTarget.offsetX, 1e-9)
+        assertEquals(-60.0, animatedTarget.offsetY, 1e-9)
+    }
+
+    @Test
     fun interpolateViewportState_scalesGeometricallyAtMidpoint() {
         val midpoint = interpolateViewportState(
             start = ViewportTransformState(scale = 4.0, offsetX = 200.0, offsetY = 100.0),

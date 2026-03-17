@@ -291,6 +291,12 @@ class DrawingView @JvmOverloads constructor(
     private fun playNextHomeReturnSegment(startState: ViewportTransformState): Boolean {
         val remainingPath = buildReturnHomePath(startState, homeCheckpoints, homeViewportState)
         val targetState = remainingPath.firstOrNull() ?: return false
+        val animatedTargetState = homeReturnAnimationTarget(
+            start = startState,
+            target = targetState,
+            focusScreenX = width / 2.0,
+            focusScreenY = height / 2.0
+        )
         val isFinalSegment = remainingPath.size == 1
         val fallbackDuration = if (isFinalSegment) {
             HOME_RETURN_FINAL_SEGMENT_DURATION_MS
@@ -298,12 +304,12 @@ class DrawingView @JvmOverloads constructor(
             HOME_RETURN_SEGMENT_DURATION_MS
         }
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = homeReturnSegmentDurationMs(startState.scale, targetState.scale, fallbackDuration)
+            duration = homeReturnSegmentDurationMs(startState.scale, animatedTargetState.scale, fallbackDuration)
             interpolator = LinearInterpolator()
             addUpdateListener { valueAnimator ->
                 val interpolatedState = interpolateViewportState(
                     start = startState,
-                    end = targetState,
+                    end = animatedTargetState,
                     fraction = valueAnimator.animatedValue as Float
                 )
                 applyViewportTransform(
@@ -331,9 +337,9 @@ class DrawingView @JvmOverloads constructor(
                 }
                 if (!wasCancelled) {
                     applyViewportTransform(
-                        scale = targetState.scale,
-                        offsetX = targetState.offsetX,
-                        offsetY = targetState.offsetY
+                        scale = animatedTargetState.scale,
+                        offsetX = animatedTargetState.offsetX,
+                        offsetY = animatedTargetState.offsetY
                     )
                     playNextHomeReturnSegment(currentViewportState())
                 }
