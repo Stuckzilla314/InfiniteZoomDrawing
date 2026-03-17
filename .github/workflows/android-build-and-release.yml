@@ -32,6 +32,36 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Prepare stable release signing key
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.INFINITE_UNIVERSE_DRAWING_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.INFINITE_UNIVERSE_DRAWING_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_PASSWORD }}
+        run: |
+          missing=()
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required release signing secrets: ${missing[*]}"
+            echo "Configure INFINITE_UNIVERSE_DRAWING_RELEASE_KEYSTORE_BASE64, INFINITE_UNIVERSE_DRAWING_RELEASE_STORE_PASSWORD, INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_ALIAS, and INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_PASSWORD."
+            exit 1
+          fi
+
+          keystore_path="$RUNNER_TEMP/infinite-universe-drawing-release.jks"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+
+          {
+            echo "INFINITE_UNIVERSE_DRAWING_RELEASE_STORE_FILE=$keystore_path"
+            echo "INFINITE_UNIVERSE_DRAWING_RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD"
+            echo "INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
+            echo "INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x ./gradlew
 
@@ -46,6 +76,38 @@ jobs:
           if ls app/build/outputs/apk/release/*-unsigned.apk >/dev/null 2>&1; then
             echo "Unsigned APKs must not be published."
             ls app/build/outputs/apk/release
+            exit 1
+          fi
+
+          apk_path="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$apk_path" ]; then
+            echo "Expected release APK was not generated at $apk_path."
+            ls -R app/build/outputs/apk/release || true
+            exit 1
+          fi
+
+          mapfile -t apksigner_candidates < <(compgen -G "$ANDROID_HOME/build-tools/*/apksigner")
+          if [ "${#apksigner_candidates[@]}" -eq 0 ]; then
+            echo "Unable to locate apksigner in \$ANDROID_HOME/build-tools."
+            exit 1
+          fi
+
+          apksigner_path="$(
+            printf '%s\n' "${apksigner_candidates[@]}" \
+              | awk -F/ '{print $(NF-1) "\t" $0}' \
+              | sort -k1,1V \
+              | tail -n 1 \
+              | cut -f2-
+          )"
+
+          if ! cert_info="$("$apksigner_path" verify --print-certs "$apk_path")"; then
+            echo "apksigner failed to verify $apk_path."
+            exit 1
+          fi
+          echo "$cert_info"
+
+          if echo "$cert_info" | grep -q "CN=Android Debug"; then
+            echo "Release APK is debug-signed and cannot update existing installs."
             exit 1
           fi
 
