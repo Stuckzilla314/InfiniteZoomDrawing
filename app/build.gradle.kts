@@ -7,10 +7,22 @@ android {
     namespace = "com.example.infiniteuniversedrawing"
     compileSdk = 34
 
-    val releaseStoreFile = providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_STORE_FILE").orNull
-    val releaseStorePassword = providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_STORE_PASSWORD").orNull
-    val releaseKeyAlias = providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_KEY_ALIAS").orNull
-    val releaseKeyPassword = providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_KEY_PASSWORD").orNull
+    val releaseStoreFile = providers
+        .environmentVariable("INFINITE_UNIVERSE_DRAWING_RELEASE_STORE_FILE")
+        .orElse(providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_STORE_FILE"))
+        .orNull
+    val releaseStorePassword = providers
+        .environmentVariable("INFINITE_UNIVERSE_DRAWING_RELEASE_STORE_PASSWORD")
+        .orElse(providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_STORE_PASSWORD"))
+        .orNull
+    val releaseKeyAlias = providers
+        .environmentVariable("INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_ALIAS")
+        .orElse(providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_KEY_ALIAS"))
+        .orNull
+    val releaseKeyPassword = providers
+        .environmentVariable("INFINITE_UNIVERSE_DRAWING_RELEASE_KEY_PASSWORD")
+        .orElse(providers.environmentVariable("INFINITE_ZOOM_DRAWING_RELEASE_KEY_PASSWORD"))
+        .orNull
     val releaseStore = releaseStoreFile?.let { file(it) }
     val hasAllReleaseSigningEnvVars = listOf(
         releaseStoreFile,
