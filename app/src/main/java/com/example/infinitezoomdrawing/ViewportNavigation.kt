@@ -1,6 +1,7 @@
 package com.example.infinitezoomdrawing
 
 import kotlin.math.abs
+import kotlin.math.pow
 
 internal data class ViewportTransformState(
     val scale: Double,
@@ -43,4 +44,15 @@ internal fun buildReturnHomePath(
         path.add(home)
     }
     return path
+}
+
+internal fun continuousZoomScaleFactor(
+    stepZoomFactor: Double,
+    stepIntervalMs: Double,
+    elapsedMs: Double
+): Double {
+    if (!stepZoomFactor.isFinite() || stepZoomFactor <= 0.0) return 1.0
+    if (!stepIntervalMs.isFinite() || stepIntervalMs <= 0.0) return 1.0
+    if (!elapsedMs.isFinite() || elapsedMs <= 0.0) return 1.0
+    return stepZoomFactor.pow(elapsedMs / stepIntervalMs)
 }

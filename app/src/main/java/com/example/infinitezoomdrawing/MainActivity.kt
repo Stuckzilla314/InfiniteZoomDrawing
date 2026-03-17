@@ -15,6 +15,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.View
 import android.widget.SeekBar
@@ -39,6 +40,8 @@ class MainActivity : AppCompatActivity() {
     private var toolsExpanded = DEFAULT_TOOLS_EXPANDED
     private val zoomHoldHandler = Handler(Looper.getMainLooper())
     private var activeZoomHoldRunnable: Runnable? = null
+    private var activeZoomFrameCallback: Choreographer.FrameCallback? = null
+    private var lastZoomFrameTimeNanos = 0L
 
     private val requestPermissionCode = 1001
     private val requestOpenImageCode = 1002
@@ -243,20 +246,38 @@ class MainActivity : AppCompatActivity() {
 
     private fun startContinuousZoom(zoomFactor: Double, onRepeat: () -> Unit) {
         stopContinuousZoom()
-        val repeatRunnable = object : Runnable {
-            override fun run() {
-                onRepeat()
-                binding.drawingView.zoomBy(zoomFactor)
-                zoomHoldHandler.postDelayed(this, CONTINUOUS_ZOOM_REPEAT_DELAY_MS)
+        val startZoomRunnable = Runnable {
+            onRepeat()
+            lastZoomFrameTimeNanos = System.nanoTime()
+            val frameCallback = object : Choreographer.FrameCallback {
+                override fun doFrame(frameTimeNanos: Long) {
+                    if (activeZoomFrameCallback !== this) return
+
+                    val elapsedMs = (frameTimeNanos - lastZoomFrameTimeNanos) / 1_000_000.0
+                    lastZoomFrameTimeNanos = frameTimeNanos
+                    binding.drawingView.zoomBy(
+                        continuousZoomScaleFactor(
+                            stepZoomFactor = zoomFactor,
+                            stepIntervalMs = CONTINUOUS_ZOOM_REPEAT_DELAY_MS.toDouble(),
+                            elapsedMs = elapsedMs
+                        )
+                    )
+                    Choreographer.getInstance().postFrameCallback(this)
+                }
             }
+            activeZoomFrameCallback = frameCallback
+            Choreographer.getInstance().postFrameCallback(frameCallback)
         }
-        activeZoomHoldRunnable = repeatRunnable
-        zoomHoldHandler.postDelayed(repeatRunnable, CONTINUOUS_ZOOM_INITIAL_DELAY_MS)
+        activeZoomHoldRunnable = startZoomRunnable
+        zoomHoldHandler.postDelayed(startZoomRunnable, CONTINUOUS_ZOOM_INITIAL_DELAY_MS)
     }
 
     private fun stopContinuousZoom() {
         activeZoomHoldRunnable?.let(zoomHoldHandler::removeCallbacks)
         activeZoomHoldRunnable = null
+        activeZoomFrameCallback?.let(Choreographer.getInstance()::removeFrameCallback)
+        activeZoomFrameCallback = null
+        lastZoomFrameTimeNanos = 0L
     }
 
     override fun onDestroy() {

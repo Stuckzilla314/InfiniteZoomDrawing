@@ -3,6 +3,7 @@ package com.example.infinitezoomdrawing
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.sqrt
 
 class ViewportNavigationTest {
 
@@ -48,5 +49,22 @@ class ViewportNavigationTest {
         )
 
         assertTrue(path.isEmpty())
+    }
+
+    @Test
+    fun continuousZoomScaleFactor_matchesPreviousStepZoomRateOverFullInterval() {
+        assertEquals(1.15, continuousZoomScaleFactor(1.15, 90.0, 90.0), 1e-9)
+    }
+
+    @Test
+    fun continuousZoomScaleFactor_scalesSmoothlyForPartialFrameTime() {
+        assertEquals(sqrt(1.15), continuousZoomScaleFactor(1.15, 90.0, 45.0), 1e-9)
+    }
+
+    @Test
+    fun continuousZoomScaleFactor_preservesReciprocalZoomOutRate() {
+        val zoomOutFactor = continuousZoomScaleFactor(1.0 / 1.15, 90.0, 90.0)
+
+        assertEquals(1.0 / 1.15, zoomOutFactor, 1e-9)
     }
 }
