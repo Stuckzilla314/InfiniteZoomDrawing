@@ -1,4 +1,4 @@
-package com.example.infinitezoomdrawing
+package com.example.infiniteuniversedrawing
 
 /**
  * Defines the available brush types for the drawing application.

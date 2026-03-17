@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.InfiniteZoomDrawing" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="Theme.InfiniteUniverseDrawing" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/toolbar_bg</item>
         <item name="colorPrimaryVariant">#1565C0</item>
         <item name="colorOnPrimary">@android:color/white</item>
@@ -18,7 +18,7 @@
         <item name="android:focusable">true</item>
     </style>
 
-    <style name="Widget.InfiniteZoomDrawing.BottomIconButton" parent="Widget.AppCompat.ImageButton">
+    <style name="Widget.InfiniteUniverseDrawing.BottomIconButton" parent="Widget.AppCompat.ImageButton">
         <item name="android:layout_height">@dimen/bottom_icon_button_size</item>
         <item name="android:layout_margin">4dp</item>
         <item name="android:background">?attr/selectableItemBackground</item>

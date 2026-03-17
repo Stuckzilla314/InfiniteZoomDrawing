@@ -69,5 +69,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "InfiniteZoomDrawing"
+rootProject.name = "InfiniteUniverseDrawing"
 include(":app")

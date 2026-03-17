@@ -1,1 +1,1 @@
-# InfiniteZoomDrawing
+# InfiniteUniverseDrawing

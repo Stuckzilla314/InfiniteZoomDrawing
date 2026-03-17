@@ -1,4 +1,4 @@
-package com.example.infinitezoomdrawing
+package com.example.infiniteuniversedrawing
 
 import android.widget.ImageButton
 import android.widget.TextView

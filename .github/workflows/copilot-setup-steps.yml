@@ -1,21 +1,37 @@
 # Copilot coding-agent environment setup
 #
 # This workflow is picked up automatically by GitHub Copilot coding agent.
-# It runs before the agent begins its task and is responsible for preparing
-# a fully working Android emulator so the agent can install the app, take
-# live screenshots, and run instrumentation tests during validation.
+# It runs before the agent begins its task and prepares a working Android
+# build environment and a running Android emulator for the agent to use
+# (app install, screenshots, instrumentation-style interaction).
 #
-# Assumptions:
-#   - GitHub-hosted ubuntu-latest runners are used (consistent with the
-#     existing android-build-and-release.yml workflow in this repository).
-#   - ANDROID_HOME is already exported by the runner image at
-#     /usr/local/lib/android/sdk, and cmdline-tools/latest is present there,
-#     but platform-tools and emulator are NOT installed in that base image,
-#     so we install them here explicitly.
-#   - Hardware acceleration is not available on GitHub-hosted runners, so
-#     the emulator runs with -gpu swiftshader_indirect (software rendering).
-#   - Boot can take up to 5 minutes on software rendering; the boot-wait
-#     loop below allows up to 5 minutes (60 × 5 s).
+# Why the previous version hung
+# ──────────────────────────────
+# The old workflow booted the emulator with a hand-rolled shell loop:
+#   • It used -gpu swiftshader_indirect (pure software rendering) without
+#     enabling KVM, so every boot took far longer than the 5-minute budget.
+#   • `adb wait-for-device` blocks until the transport layer is up, but with
+#     software rendering the emulator process often stalls before ADB even
+#     connects, causing an indefinite hang.
+#
+# Why this version is reliable
+# ─────────────────────────────
+# reactivecircus/android-emulator-runner@v2 is the industry-standard action
+# for running Android emulators on GitHub-hosted Ubuntu runners. It:
+#   • Enables KVM acceleration automatically (hardware-assisted virtualisation
+#     is available on GitHub-hosted ubuntu-latest runners).
+#   • Handles AVD creation, emulator launch, and boot detection internally
+#     using a proven, well-maintained implementation.
+#   • Uses a configurable boot-timeout (default 600 s) rather than a fixed
+#     5-minute loop, giving the emulator adequate time to finish booting.
+#
+# Emulator persistence
+# ─────────────────────
+# The action starts the emulator as a background process, waits for boot,
+# and then runs the provided `script`. After the step exits, the emulator
+# process keeps running until the job's post-step cleanup phase – which runs
+# only after ALL steps have completed. This means the emulator is available
+# to the Copilot agent's own steps throughout the job.
 
 name: Copilot setup steps
 
@@ -29,143 +45,61 @@ jobs:
       contents: read
 
     steps:
-      # ---------------------------------------------------------------
-      # 1. Check out the repository so Copilot has source code available
-      # ---------------------------------------------------------------
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # ---------------------------------------------------------------
-      # 2. Java runtime (required by both Gradle and the Android emulator)
-      # ---------------------------------------------------------------
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      # ---------------------------------------------------------------
-      # 3. Install Android SDK components that are missing from the
-      #    base runner image: platform-tools, emulator, platform SDK,
-      #    and the x86_64 system image.
-      # ---------------------------------------------------------------
-      - name: Install Android SDK components
-        env:
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # KVM device permissions are required for hardware-accelerated emulation
+      # on GitHub-hosted Ubuntu runners.
+      - name: Enable KVM group permissions
         run: |
-          set -euxo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
-          export PATH="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${ANDROID_SDK_ROOT}/emulator:${PATH}"
+      # Starts the emulator in the background, waits for full boot, then runs
+      # the inline script. The emulator process keeps running after this step
+      # exits so subsequent agent steps can interact with it via adb.
+      - name: Start Android emulator (API 34)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: Nexus 6
+          force-avd-creation: true
+          # KVM accelerates CPU virtualisation; swiftshader_indirect provides
+          # software OpenGL rendering because GitHub-hosted runners have no
+          # physical GPU. This combination (KVM + swiftshader_indirect) is the
+          # standard recommended setup for headless Ubuntu emulation.
+          emulator-options: >-
+            -no-snapshot-save
+            -no-window
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+          disable-animations: true
+          script: echo "Emulator booted and ready for Copilot agent use"
 
-          # Accept all licences non-interactively
-          yes | sdkmanager --licenses || true
-
-          sdkmanager \
-            "platform-tools" \
-            "emulator" \
-            "platforms;android-34" \
-            "system-images;android-34;google_apis;x86_64"
-
-      # ---------------------------------------------------------------
-      # 4. Persist PATH and ANDROID_* variables for every subsequent
-      #    step (including the Copilot agent's own steps).
-      # ---------------------------------------------------------------
-      - name: Configure environment variables
-        env:
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-        run: |
-          set -euxo pipefail
-
-          echo "ANDROID_HOME=${ANDROID_SDK_ROOT}"              >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"          >> "$GITHUB_ENV"
-          echo "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin"  >> "$GITHUB_PATH"
-          echo "${ANDROID_SDK_ROOT}/platform-tools"            >> "$GITHUB_PATH"
-          echo "${ANDROID_SDK_ROOT}/emulator"                  >> "$GITHUB_PATH"
-
-      # ---------------------------------------------------------------
-      # 5. Create the AVD that the emulator will boot from.
-      # ---------------------------------------------------------------
-      - name: Create AVD
-        run: |
-          set -euxo pipefail
-
-          # Suppress the "hardware profile" prompt by piping "no"
-          echo "no" | avdmanager create avd \
-            --name copilot-avd \
-            --package "system-images;android-34;google_apis;x86_64" \
-            --device "pixel"
-
-      # ---------------------------------------------------------------
-      # 6. Boot the emulator headlessly and wait until the device is
-      #    fully booted (sys.boot_completed == 1).
-      # ---------------------------------------------------------------
-      - name: Boot emulator
-        run: |
-          set -euxo pipefail
-
-          # Launch in background; redirect output to a log we can inspect
-          nohup emulator \
-            -avd copilot-avd \
-            -no-window \
-            -no-audio \
-            -no-boot-anim \
-            -gpu swiftshader_indirect \
-            >/tmp/emulator.log 2>&1 &
-
-          echo "Emulator PID: $!"
-
-          # Start the adb server and wait for the device transport to appear
-          adb start-server
-          adb wait-for-device
-
-          # Poll sys.boot_completed until it equals "1" or we time out
-          echo "Waiting for Android boot to complete..."
-          boot_completed=""
-          for i in $(seq 1 60); do
-            boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" || true
-            if [ "$boot_completed" = "1" ]; then
-              echo "Boot completed after $((i * 5)) seconds."
-              break
-            fi
-            echo "  attempt ${i}/60 – sys.boot_completed='${boot_completed}'"
-            sleep 5
-          done
-
-          if [ "$boot_completed" != "1" ]; then
-            echo "ERROR: emulator did not finish booting within 5 minutes."
-            echo "--- emulator.log (last 50 lines) ---"
-            tail -50 /tmp/emulator.log || true
-            exit 1
-          fi
-
-          # Confirm the device appears in adb
-          adb devices
-
-      # ---------------------------------------------------------------
-      # 7. Final verification – print tool versions and connected devices
-      # ---------------------------------------------------------------
       - name: Verify environment
         run: |
           echo "=== Java ==="
           java -version
 
+          echo "=== Gradle ==="
+          ./gradlew --version
+
           echo "=== adb ==="
-          which adb
           adb version
-
-          echo "=== emulator ==="
-          which emulator
-          emulator -version 2>&1 | head -5
-
-          echo "=== sdkmanager ==="
-          which sdkmanager
-          sdkmanager --version
-
-          echo "=== avdmanager ==="
-          which avdmanager
-
-          echo "=== AVDs ==="
-          avdmanager list avd
 
           echo "=== Connected devices ==="
           adb devices

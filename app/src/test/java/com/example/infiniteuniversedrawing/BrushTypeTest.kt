@@ -1,4 +1,4 @@
-package com.example.infinitezoomdrawing
+package com.example.infiniteuniversedrawing
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
