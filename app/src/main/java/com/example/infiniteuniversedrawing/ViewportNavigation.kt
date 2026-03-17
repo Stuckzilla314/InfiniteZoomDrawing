@@ -1,4 +1,4 @@
-package com.example.infinitezoomdrawing
+package com.example.infiniteuniversedrawing
 
 import kotlin.math.abs
 import kotlin.math.ln

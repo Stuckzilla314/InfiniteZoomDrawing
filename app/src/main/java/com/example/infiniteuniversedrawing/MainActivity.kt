@@ -1,4 +1,4 @@
-package com.example.infinitezoomdrawing
+package com.example.infiniteuniversedrawing
 
 import android.Manifest
 import android.app.Activity
@@ -23,7 +23,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.infinitezoomdrawing.databinding.ActivityMainBinding
+import com.example.infiniteuniversedrawing.databinding.ActivityMainBinding
 import java.io.IOException
 import java.io.OutputStream
 
@@ -328,14 +328,14 @@ class MainActivity : AppCompatActivity() {
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/InfiniteZoomDrawing")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/InfiniteUniverseDrawing")
             }
             imageUri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
             outputStream = imageUri?.let { contentResolver.openOutputStream(it) }
         } else {
             @Suppress("DEPRECATION")
             val imagesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val appDir = java.io.File(imagesDir, "InfiniteZoomDrawing").also { it.mkdirs() }
+            val appDir = java.io.File(imagesDir, "InfiniteUniverseDrawing").also { it.mkdirs() }
             val file = java.io.File(appDir, filename)
             imageUri = Uri.fromFile(file)
             outputStream = file.outputStream()

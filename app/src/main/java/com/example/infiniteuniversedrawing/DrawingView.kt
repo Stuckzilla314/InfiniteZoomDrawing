@@ -1,4 +1,4 @@
-package com.example.infinitezoomdrawing
+package com.example.infiniteuniversedrawing
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter

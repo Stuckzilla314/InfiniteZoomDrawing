@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Infinite Zoom Drawing</string>
+    <string name="app_name">Infinite Universe Drawing</string>
 
     <!-- Actions -->
     <string name="new_drawing">New</string>
