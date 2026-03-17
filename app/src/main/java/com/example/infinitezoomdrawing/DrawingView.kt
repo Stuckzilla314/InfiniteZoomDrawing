@@ -38,7 +38,7 @@ class DrawingView @JvmOverloads constructor(
         private const val TARGET_MIN_STABLE_VIEWPORT_SCALE = 1.0 / TARGET_STABLE_VIEWPORT_SCALE
         private const val HOME_RETURN_SEGMENT_DURATION_MS = 450L
         private const val HOME_RETURN_FINAL_SEGMENT_DURATION_MS = 650L
-        private val HOME_VIEWPORT_STATE = ViewportTransformState(scale = 1.0, offsetX = 0.0, offsetY = 0.0)
+        private val INITIAL_HOME_VIEWPORT_STATE = ViewportTransformState(scale = 1.0, offsetX = 0.0, offsetY = 0.0)
     }
 
     private data class Stroke(
@@ -57,6 +57,7 @@ class DrawingView @JvmOverloads constructor(
     private var viewportScale = 1.0
     private var viewportOffsetX = 0.0
     private var viewportOffsetY = 0.0
+    private var homeViewportState = INITIAL_HOME_VIEWPORT_STATE
     private val homeCheckpoints = mutableListOf<ViewportTransformState>()
     private var viewportAnimator: ValueAnimator? = null
 
@@ -220,18 +221,18 @@ class DrawingView @JvmOverloads constructor(
     fun animateReturnHome(): Boolean {
         cancelViewportAnimation()
         val startState = currentViewportState()
-        val returnPath = buildReturnHomePath(startState, homeCheckpoints, HOME_VIEWPORT_STATE)
+        val returnPath = buildReturnHomePath(startState, homeCheckpoints, homeViewportState)
         if (returnPath.isEmpty()) return false
         playHomeReturnSegment(startState, returnPath, 0)
         return true
     }
 
-    fun isAtHome(): Boolean = currentViewportState().isApproximately(HOME_VIEWPORT_STATE)
+    fun isAtHome(): Boolean = currentViewportState().isApproximately(homeViewportState)
 
     fun addHomeCheckpoint(): Boolean {
         cancelViewportAnimation()
         val checkpoint = currentViewportState()
-        if (checkpoint.isApproximately(HOME_VIEWPORT_STATE)) return false
+        if (checkpoint.isApproximately(homeViewportState)) return false
         if (homeCheckpoints.any { it.isApproximately(checkpoint) }) return false
         homeCheckpoints.add(checkpoint)
         return true
@@ -586,6 +587,11 @@ class DrawingView @JvmOverloads constructor(
         loadedBitmapX = ((loadedBitmapX - anchorX) * scaleFactor).toFloat()
         loadedBitmapY = ((loadedBitmapY - anchorY) * scaleFactor).toFloat()
         loadedBitmapScale *= scaleFactor.toFloat()
+
+        homeViewportState = rebaseViewportState(homeViewportState, scaleFactor, anchorX, anchorY)
+        homeCheckpoints.indices.forEach { index ->
+            homeCheckpoints[index] = rebaseViewportState(homeCheckpoints[index], scaleFactor, anchorX, anchorY)
+        }
 
         viewportOffsetX += viewportScale * anchorX.toDouble()
         viewportOffsetY += viewportScale * anchorY.toDouble()

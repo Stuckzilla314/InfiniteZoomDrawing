@@ -52,6 +52,46 @@ class ViewportNavigationTest {
     }
 
     @Test
+    fun rebaseViewportState_updatesHomeToEquivalentPostRebaseTransform() {
+        val rebasedHome = rebaseViewportState(
+            state = ViewportTransformState(scale = 1.0, offsetX = 0.0, offsetY = 0.0),
+            scaleFactor = 2.5,
+            anchorX = 40f,
+            anchorY = 24f
+        )
+
+        assertEquals(0.4, rebasedHome.scale, 1e-9)
+        assertEquals(40.0, rebasedHome.offsetX, 1e-9)
+        assertEquals(24.0, rebasedHome.offsetY, 1e-9)
+    }
+
+    @Test
+    fun buildReturnHomePath_usesRebasedHomeAndCheckpointTransforms() {
+        val home = rebaseViewportState(
+            state = ViewportTransformState(scale = 1.0, offsetX = 0.0, offsetY = 0.0),
+            scaleFactor = 2.0,
+            anchorX = 50f,
+            anchorY = 25f
+        )
+        val checkpoint = rebaseViewportState(
+            state = ViewportTransformState(scale = 2.0, offsetX = 120.0, offsetY = 80.0),
+            scaleFactor = 2.0,
+            anchorX = 50f,
+            anchorY = 25f
+        )
+        val current = rebaseViewportState(
+            state = ViewportTransformState(scale = 4.0, offsetX = 260.0, offsetY = 180.0),
+            scaleFactor = 2.0,
+            anchorX = 50f,
+            anchorY = 25f
+        )
+
+        val path = buildReturnHomePath(current, listOf(checkpoint), home)
+
+        assertEquals(listOf(checkpoint, home), path)
+    }
+
+    @Test
     fun continuousZoomScaleFactor_matchesPreviousStepZoomRateOverFullInterval() {
         assertEquals(1.15, continuousZoomScaleFactor(1.15, 90.0, 90.0), 1e-9)
     }

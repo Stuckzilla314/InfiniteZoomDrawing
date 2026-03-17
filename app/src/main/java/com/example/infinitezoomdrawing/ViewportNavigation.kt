@@ -46,6 +46,22 @@ internal fun buildReturnHomePath(
     return path
 }
 
+internal fun rebaseViewportState(
+    state: ViewportTransformState,
+    scaleFactor: Double,
+    anchorX: Float,
+    anchorY: Float
+): ViewportTransformState {
+    if (!state.isValid()) return state
+    if (!scaleFactor.isFinite() || scaleFactor <= 0.0 || scaleFactor == 1.0) return state
+
+    return ViewportTransformState(
+        scale = state.scale / scaleFactor,
+        offsetX = state.offsetX + (state.scale * anchorX.toDouble()),
+        offsetY = state.offsetY + (state.scale * anchorY.toDouble())
+    )
+}
+
 internal fun continuousZoomScaleFactor(
     stepZoomFactor: Double,
     stepIntervalMs: Double,
